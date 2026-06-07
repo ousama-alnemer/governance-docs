@@ -1,1 +1,381 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Azure Entra & Cost Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-identity-browser/3.7.1/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ─── PROFESSIONAL UI THEME ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--surface:#0d1117;--card:#0d1117;--card2:#161b22;--card3:#1c2128;
+  --border:#21262d;--accent:#388bfd;--accent2:#3fb950;--warn:#d29922;--danger:#f85149;
+  --purple:#bc8cff;--text:#e6edf3;--muted:#7d8590;--mono:'JetBrains Mono',monospace;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 20% 50%,rgba(56,139,253,.08) 0%,transparent 60%),var(--bg);}
+.login-card{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:420px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.btn-ms{width:100%;padding:13px;background:linear-gradient(135deg,#0078d4,#005fa3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;}
+
+/* HEADER & NAV */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;position:sticky;top:0;z-index:200;}
+.header-brand{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+.tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;padding:0 20px;}
+.tnav{padding:13px 16px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.tnav.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* MAIN COMPONENTS */
+.main{padding:20px;max-width:1600px;margin:0 auto}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.sec-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1.2px;display:flex;align-items:center;gap:8px}
+
+/* CARDS & TABLES */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.sc{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:140px;}
+.sc-n{font-family:var(--mono);font-size:22px;font-weight:700;}
+.tbl-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{padding:12px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--card3);border-bottom:1px solid var(--border);text-transform:uppercase;}
+td{padding:12px;border-bottom:1px solid var(--border);}
+tr:hover{background:rgba(56,139,253,.04)}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:7px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .1s;display:inline-flex;align-items:center;gap:6px;}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-g{background:var(--accent2);border-color:var(--accent2);color:#000}
+.btn-d{border-color:var(--danger);color:var(--danger);background:transparent}
+.btn-d:hover{background:var(--danger);color:#fff}
+
+/* INPUTS */
+input,select,textarea{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;}
+input:focus{border-color:var(--accent)}
+
+/* UTILS */
+.b{padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;font-family:var(--mono)}
+.b-g{background:rgba(63,185,80,.15);color:var(--accent2)}
+.b-r{background:rgba(248,81,73,.15);color:var(--danger)}
+.b-b{background:rgba(56,139,253,.15);color:var(--accent)}
+.mono{font-family:var(--mono);color:var(--muted)}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* COST CHART */
+.bar-wrap{display:flex;flex-direction:column;gap:8px}
+.bar-item{display:flex;align-items:center;gap:12px}
+.bar-label{width:200px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:10px;background:var(--card3);border-radius:5px;overflow:hidden}
+.bar-fill{height:100%;transition:width 0.8s ease}
+
+/* NOTIF */
+.notif{position:fixed;bottom:20px;right:20px;z-index:500;background:var(--card2);border:1px solid var(--border);padding:12px 20px;border-radius:10px;display:none;box-shadow:0 8px 32px #000;}
+.notif.show{display:block}
+</style>
+</head>
+<body>
+
+<div id="notif" class="notif"></div>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1 style="margin-bottom:20px">Azure Enterprise Manager</h1>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:30px">Centralized management for Entra Applications, Security Groups, and Cloud Costs.</p>
+    <button class="btn-ms" onclick="signIn()">Sign in with Microsoft</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="header-brand">⚡ AZURE MANAGER</div>
+    <div style="margin-left:auto;display:flex;gap:15px;align-items:center">
+      <span id="userLabel" style="font-size:12px;color:var(--muted)"></span>
+      <button class="btn btn-d" style="padding:4px 10px;font-size:11px" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tnav active" onclick="goTab('apps',this)">App Registrations</button>
+    <button class="tnav" onclick="goTab('sg',this)">Security Groups</button>
+    <button class="tnav" onclick="goTab('cost',this)">Cost Management</button>
+    <button class="tnav" onclick="goTab('secrets',this)">Secret Expiry</button>
+    <button class="tnav" onclick="goTab('audit',this)">Sign-In Audit</button>
+  </div>
+
+  <div class="main">
+    <!-- TAB: APPS -->
+    <div class="tab-panel active" id="tab-apps">
+      <div class="sec-hdr">
+        <div class="sec-title">App Management</div>
+        <button class="btn btn-p" onclick="loadApps()">↻ Refresh</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="appTable">
+          <thead><tr><th>Name</th><th>Client ID</th><th>Created</th><th>Secrets</th><th>Status</th></tr></thead>
+          <tbody id="appTbody"><tr><td colspan="5">Click refresh to load...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: SECURITY GROUPS -->
+    <div class="tab-panel" id="tab-sg">
+      <div class="sec-hdr">
+        <div class="sec-title">Security Groups (Entra ID)</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-g" onclick="openCreateSG()">+ Create Group</button>
+          <button class="btn btn-p" onclick="loadSG()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Group Name</th><th>Type</th><th>ID</th><th>Role-Assignable</th><th>Actions</th></tr></thead>
+          <tbody id="sgTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: COST -->
+    <div class="tab-panel" id="tab-cost">
+      <div class="sec-hdr">
+        <div class="sec-title">Cost Analysis</div>
+        <div style="display:flex;gap:10px">
+            <select id="costSub" style="width:250px"></select>
+            <select id="costPeriod">
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last Quarter</option>
+            </select>
+            <button class="btn btn-p" onclick="runCostQuery()">Run Query</button>
+        </div>
+      </div>
+      <div class="stats" id="costStats" style="display:none">
+        <div class="sc"><div class="sc-n" id="totalCost" style="color:var(--accent2)">$0.00</div><div class="sc-l">Total Spend</div></div>
+        <div class="sc"><div class="sc-n" id="topRg">—</div><div class="sc-l">Highest Resource Group</div></div>
+      </div>
+      <div class="tbl-wrap" style="padding:20px">
+        <div id="costChart" class="bar-wrap"></div>
+      </div>
+    </div>
+
+    <!-- TAB: SECRETS -->
+    <div class="tab-panel" id="tab-secrets">
+        <div class="sec-hdr"><div class="sec-title">Global Secret Expiry Report</div><button class="btn btn-p" onclick="loadSecrets()">Run Scan</button></div>
+        <div class="tbl-wrap">
+            <table>
+                <thead><tr><th>Application</th><th>Secret Name</th><th>Expires</th><th>Days Left</th></tr></thead>
+                <tbody id="secTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB: AUDIT -->
+    <div class="tab-panel" id="tab-audit">
+        <div class="sec-hdr"><div class="sec-title">Sign-In Audit</div></div>
+        <div class="ctrls" style="margin-bottom:15px;display:flex;gap:10px">
+            <input id="auditUser" placeholder="User email..."/>
+            <button class="btn btn-p" onclick="loadAudit()">Search Logs</button>
+        </div>
+        <div class="tbl-wrap">
+            <table>
+                <thead><tr><th>Time</th><th>User</th><th>App</th><th>IP</th><th>Status</th></tr></thead>
+                <tbody id="auditTbody"></tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─── CONFIG ─── */
+const CLIENT_ID = "287cb9b4-e827-4a70-a2fe-4f6bf6668cc3";
+const TENANT_ID = "d20204de-f10a-44f3-9daa-9cedec0db4d2";
+
+const msalCfg = {
+    auth: { clientId: CLIENT_ID, authority: `https://login.microsoftonline.com/${TENANT_ID}`, redirectUri: window.location.origin + window.location.pathname },
+    cache: { cacheLocation: "sessionStorage" }
+};
+
+let msalInst, account;
+
+/* ─── AUTH ─── */
+async function signIn() {
+    msalInst = new msal.PublicClientApplication(msalCfg);
+    await msalInst.initialize();
+    try {
+        const res = await msalInst.loginPopup({ scopes: ["User.Read", "Group.ReadWrite.All", "Application.ReadWrite.All", "AuditLog.Read.All", "https://management.azure.com/user_impersonation"] });
+        account = res.account;
+        initApp();
+    } catch (e) { alert("Login failed: " + e.message); }
+}
+
+function signOut() { msalInst.logoutPopup(); }
+
+function initApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('userLabel').textContent = account.username;
+    loadApps();
+    loadSubs();
+}
+
+async function getTok(scopes) {
+    const req = { scopes, account };
+    try { return (await msalInst.acquireTokenSilent(req)).accessToken; }
+    catch { return (await msalInst.acquireTokenPopup(req)).accessToken; }
+}
+
+/* ─── GRAPH WRAPPERS ─── */
+async function gCall(endpoint) {
+    const t = await getTok(["User.Read", "Group.ReadWrite.All", "Application.ReadWrite.All", "AuditLog.Read.All"]);
+    const r = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, { headers: { Authorization: `Bearer ${t}` } });
+    return r.json();
+}
+
+/* ─── APP MGMT ─── */
+async function loadApps() {
+    const body = document.getElementById('appTbody');
+    body.innerHTML = '<tr><td colspan="5"><span class="spin"></span> Loading...</td></tr>';
+    const data = await gCall('/applications?$select=id,appId,displayName,createdDateTime,passwordCredentials');
+    body.innerHTML = data.value.map(a => `
+        <tr>
+            <td><strong>${a.displayName}</strong></td>
+            <td class="mono">${a.appId}</td>
+            <td>${new Date(a.createdDateTime).toLocaleDateString()}</td>
+            <td><span class="b b-b">${a.passwordCredentials.length}</span></td>
+            <td>${a.passwordCredentials.length ? '<span class="b b-g">Secured</span>' : '<span class="b b-r">No Secret</span>'}</td>
+        </tr>
+    `).join('');
+}
+
+/* ─── SECURITY GROUPS ─── */
+async function loadSG() {
+    const body = document.getElementById('sgTbody');
+    const data = await gCall('/groups?$filter=securityEnabled eq true&$top=100');
+    body.innerHTML = data.value.map(g => `
+        <tr>
+            <td><strong>${g.displayName}</strong></td>
+            <td>${g.groupTypes.includes('Unified') ? 'M365' : 'Security'}</td>
+            <td class="mono">${g.id}</td>
+            <td>${g.isAssignableToRole ? 'Yes' : 'No'}</td>
+            <td><button class="btn btn-d" onclick="deleteSG('${g.id}')">Delete</button></td>
+        </tr>
+    `).join('');
+}
+
+/* ─── COST MGMT (ARM API) ─── */
+async function loadSubs() {
+    const t = await getTok(["https://management.azure.com/user_impersonation"]);
+    const r = await fetch('https://management.azure.com/subscriptions?api-version=2020-01-01', { headers: { Authorization: `Bearer ${t}` } });
+    const data = await r.json();
+    const sel = document.getElementById('costSub');
+    sel.innerHTML = data.value.map(s => `<option value="${s.subscriptionId}">${s.displayName}</option>`).join('');
+}
+
+async function runCostQuery() {
+    const subId = document.getElementById('costSub').value;
+    const days = document.getElementById('costPeriod').value;
+    const t = await getTok(["https://management.azure.com/user_impersonation"]);
+    
+    const now = new Date();
+    const start = new Date(); start.setDate(now.getDate() - days);
+    
+    const body = {
+        type: "ActualCost",
+        timeframe: "Custom",
+        timePeriod: { from: start.toISOString(), to: now.toISOString() },
+        dataset: {
+            granularity: "None",
+            aggregation: { totalCost: { name: "Cost", function: "Sum" } },
+            grouping: [{ type: "Dimension", name: "ResourceGroupName" }]
+        }
+    };
+
+    const r = await fetch(`https://management.azure.com/subscriptions/${subId}/providers/Microsoft.CostManagement/query?api-version=2021-10-01`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    
+    const data = await r.json();
+    renderCostChart(data.properties.rows);
+}
+
+function renderCostChart(rows) {
+    const container = document.getElementById('costChart');
+    const sorted = rows.sort((a,b) => b[0] - a[0]).slice(0, 10);
+    const max = sorted[0][0];
+    const total = rows.reduce((sum, r) => sum + r[0], 0);
+
+    document.getElementById('costStats').style.display = 'flex';
+    document.getElementById('totalCost').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('topRg').textContent = sorted[0][1];
+
+    container.innerHTML = sorted.map(r => `
+        <div class="bar-item">
+            <div class="bar-label">${r[1]}</div>
+            <div class="bar-track">
+                <div class="bar-fill" style="width:${(r[0]/max*100)}%; background:var(--accent)"></div>
+            </div>
+            <div style="width:80px; text-align:right" class="mono">$${r[0].toFixed(2)}</div>
+        </div>
+    `).join('');
+}
+
+/* ─── SECRET SCAN ─── */
+async function loadSecrets() {
+    const data = await gCall('/applications?$select=displayName,passwordCredentials');
+    const now = new Date();
+    const body = document.getElementById('secTbody');
+    let html = '';
+    data.value.forEach(a => {
+        a.passwordCredentials.forEach(s => {
+            const exp = new Date(s.endDateTime);
+            const days = Math.floor((exp - now) / (1000 * 60 * 60 * 24));
+            const cls = days < 0 ? 'b-r' : days < 30 ? 'b-warn' : 'b-g';
+            html += `<tr><td>${a.displayName}</td><td>${s.displayName}</td><td>${exp.toLocaleDateString()}</td><td><span class="b ${cls}">${days} days</span></td></tr>`;
+        });
+    });
+    body.innerHTML = html;
+}
+
+/* ─── AUDIT ─── */
+async function loadAudit() {
+    const user = document.getElementById('auditUser').value;
+    let filter = '';
+    if(user) filter = `&$filter=startsWith(userPrincipalName,'${user}')`;
+    const data = await gCall(`/auditLogs/signIns?$top=50${filter}`);
+    const body = document.getElementById('auditTbody');
+    body.innerHTML = data.value.map(l => `
+        <tr>
+            <td class="mono">${new Date(l.createdDateTime).toLocaleString()}</td>
+            <td>${l.userPrincipalName}</td>
+            <td>${l.appDisplayName}</td>
+            <td class="mono">${l.ipAddress}</td>
+            <td><span class="b ${l.status.errorCode === 0 ? 'b-g' : 'b-r'}">${l.status.errorCode === 0 ? 'Success' : 'Failed'}</span></td>
+        </tr>
+    `).join('');
+}
+
+/* ─── UI TABS ─── */
+function goTab(id, el) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tnav').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    el.classList.add('active');
+}
+
+function notify(txt) {
+    const n = document.getElementById('notif');
+    n.textContent = txt; n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
