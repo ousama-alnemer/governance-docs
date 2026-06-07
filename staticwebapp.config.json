@@ -1,35 +1,5 @@
 {
-  "auth": {
-    "identityProviders": {
-      "azureActiveDirectory": {
-        "userDetailsClaim": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
-        "registration": {
-          "openIdIssuer": "https://login.microsoftonline.com/e17591a7-8910-4edb-979c-6f2025c2e4f0",
-          "clientIdSettingName": "e17591a7-8910-4edb-979c-6f2025c2e4f0",
-          "clientSecretSettingName": "NOO8Q~uMbIt2GN5Zkhiv0M~ytZZEA.nnoZJH0bHD"
-        }
-      }
-    }
-  },
-  "routes": [
-    {
-      "route": "/*",
-      "allowedRoles": ["authenticated"]
-    },
-    {
-      "route": "/.auth/login/aad",
-      "allowedRoles": ["anonymous"]
-    }
-  ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/aad",
-      "statusCode": 302
-    }
-  },
-  "globalHeaders": {
-    "X-Frame-Options": "DENY",
-    "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "default-src 'self'"
+  "navigationFallback": {
+    "rewrite": "/index.html"
   }
 }
