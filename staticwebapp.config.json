@@ -1,5 +1,13 @@
 {
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.zip", "*.exe", "*.docx", "*.xlsx", "*.pdf"]
+  },
+  "mimeTypes": {
+    ".zip": "application/zip",
+    ".exe": "application/octet-stream",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pdf": "application/pdf"
   }
 }
