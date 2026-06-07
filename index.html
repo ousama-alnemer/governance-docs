@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ousama Alnemer — Document Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --navy:#0f1f35;
+  --navy2:#1a3a5c;
+  --blue:#2563eb;
+  --blue-light:#3b82f6;
+  --accent:#00d4aa;
+  --accent2:#f59e0b;
+  --surface:#f8fafd;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --muted:#64748b;
+  --word:#1a73e8;
+  --img:#7c3aed;
+  --html:#0f766e;
+  --pdf:#dc2626;
+  --other:#92400e;
+}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--surface);
+  color:var(--text);
+  min-height:100vh;
+}
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#1e4a7a 100%);
+  padding:0;
+  position:relative;
+  overflow:hidden;
+}
+.header::before{
+  content:'';
+  position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.header-inner{
+  position:relative;z-index:1;
+  max-width:1200px;margin:0 auto;
+  padding:40px 32px 32px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  flex-wrap:wrap;
+}
+.header-brand{display:flex;align-items:center;gap:16px}
+.brand-icon{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,var(--accent),#00a87f);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+  box-shadow:0 4px 20px rgba(0,212,170,.35);
+  flex-shrink:0;
+}
+.brand-text h1{
+  font-family:'Syne',sans-serif;
+  font-size:24px;font-weight:800;
+  color:#fff;letter-spacing:-.3px;
+  line-height:1.1;
+}
+.brand-text p{font-size:13px;color:rgba(255,255,255,.6);margin-top:3px}
+
+.header-stats{display:flex;gap:24px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--accent);line-height:1}
+.stat-label{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;text-transform:uppercase;letter-spacing:.8px}
+
+/* ── SEARCH + FILTER BAR ── */
+.toolbar{
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+}
+.toolbar-inner{
+  max-width:1200px;margin:0 auto;
+  padding:14px 32px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.search-wrap{
+  flex:1;min-width:200px;
+  position:relative;
+}
+.search-wrap svg{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--muted);pointer-events:none;
+}
+.search-input{
+  width:100%;
+  padding:9px 12px 9px 38px;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  color:var(--text);
+  background:#fafbfc;
+  transition:border-color .2s,box-shadow .2s;
+  outline:none;
+}
+.search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);background:#fff}
+.search-input::placeholder{color:var(--muted)}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{
+  padding:7px 14px;
+  border:1.5px solid var(--border);
+  border-radius:7px;
+  background:#fff;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  color:var(--muted);
+  cursor:pointer;
+  transition:all .18s;
+  white-space:nowrap;
+}
+.filter-btn:hover{border-color:var(--blue);color:var(--blue);background:#eff6ff}
+.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* ── MAIN ── */
+.main{max-width:1200px;margin:0 auto;padding:32px}
+
+/* ── CATEGORY SECTION ── */
+.category{margin-bottom:40px;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.cat-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:16px;
+  padding-bottom:10px;
+  border-bottom:2px solid var(--border);
+}
+.cat-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.cat-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--navy2)}
+.cat-count{
+  margin-left:auto;
+  font-size:12px;font-weight:600;
+  color:var(--muted);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2px 10px;
+}
+
+/* ── DOC GRID ── */
+.doc-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:14px;
+}
+
+/* ── DOC CARD ── */
+.doc-card{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  cursor:pointer;
+  transition:transform .18s,box-shadow .18s,border-color .18s;
+  text-decoration:none;
+  display:flex;flex-direction:column;
+  animation:fadeUp .4s ease both;
+}
+.doc-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 8px 28px rgba(0,0,0,.1);
+  border-color:var(--blue-light);
+}
+
+.doc-thumb{
+  height:110px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:42px;
+  position:relative;
+  overflow:hidden;
+}
+.doc-thumb.type-word{background:linear-gradient(135deg,#dbeafe,#eff6ff)}
+.doc-thumb.type-img{background:linear-gradient(135deg,#ede9fe,#f5f3ff)}
+.doc-thumb.type-html{background:linear-gradient(135deg,#ccfbf1,#f0fdf4)}
+.doc-thumb.type-pdf{background:linear-gradient(135deg,#fee2e2,#fef2f2)}
+.doc-thumb.type-other{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
+
+/* Image preview */
+.doc-thumb img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .3s;
+}
+.doc-card:hover .doc-thumb img{transform:scale(1.05)}
+
+.doc-body{padding:12px 14px 14px;flex:1;display:flex;flex-direction:column;gap:4px}
+.doc-name{
+  font-size:13px;font-weight:600;color:var(--text);
+  line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.doc-meta{display:flex;align-items:center;gap:6px;margin-top:4px}
+.doc-type-badge{
+  font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;
+}
+.badge-word{background:#dbeafe;color:#1d4ed8}
+.badge-img{background:#ede9fe;color:#6d28d9}
+.badge-html{background:#ccfbf1;color:#0f766e}
+.badge-pdf{background:#fee2e2;color:#b91c1c}
+.badge-other{background:#fef3c7;color:#92400e}
+.doc-size{font-size:11px;color:var(--muted);margin-left:auto}
+
+/* ── UPLOAD CARD ── */
+.upload-card{
+  border:2px dashed var(--border);
+  border-radius:12px;
+  background:transparent;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:8px;
+  padding:24px 16px;
+  cursor:pointer;
+  transition:border-color .2s,background .2s;
+  min-height:168px;
+  color:var(--muted);
+  font-size:13px;text-align:center;
+}
+.upload-card:hover{border-color:var(--blue);background:#eff6ff;color:var(--blue)}
+.upload-card svg{opacity:.5}
+
+/* ── HOW TO ADD ── */
+.how-to{
+  background:linear-gradient(135deg,#0f1f35,#1a3a5c);
+  border-radius:14px;
+  padding:28px 32px;
+  margin-bottom:40px;
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;
+}
+@media(max-width:700px){.how-to{grid-template-columns:1fr}}
+.how-step{color:#fff}
+.how-num{
+  width:28px;height:28px;
+  background:var(--accent);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;
+  color:#0f1f35;
+  margin-bottom:10px;
+}
+.how-step h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:5px}
+.how-step p{font-size:12.5px;color:rgba(255,255,255,.6);line-height:1.55}
+.how-step code{
+  font-family:'Courier New',monospace;font-size:11px;
+  background:rgba(255,255,255,.1);
+  padding:1px 6px;border-radius:4px;color:var(--accent);
+}
+
+/* ── EMPTY STATE ── */
+.empty{
+  text-align:center;padding:60px 20px;color:var(--muted);
+  display:none;
+}
+.empty.show{display:block}
+.empty svg{margin-bottom:12px;opacity:.3}
+.empty h3{font-size:16px;font-weight:600;margin-bottom:6px;color:var(--text)}
+
+/* ── NO RESULTS ── */
+#no-results{display:none;text-align:center;padding:48px;color:var(--muted)}
+#no-results.show{display:block}
+
+@media(max-width:768px){
+  .header-inner{padding:24px 20px 20px}
+  .toolbar-inner{padding:12px 20px}
+  .main{padding:20px}
+  .how-to{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="brand-icon">📁</div>
+      <div class="brand-text">
+        <h1>Document Portal</h1>
+        <p>Ousama Alnemer — Internal Resources</p>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Documents</div></div>
+      <div class="stat"><div class="stat-num" id="stat-cats">0</div><div class="stat-label">Categories</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="search-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="search" type="text" placeholder="Search documents…"/>
+    </div>
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="word">📄 Word</button>
+      <button class="filter-btn" data-filter="img">🖼 Images</button>
+      <button class="filter-btn" data-filter="html">🌐 HTML</button>
+      <button class="filter-btn" data-filter="pdf">📕 PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- HOW TO ADD DOCS -->
+  <div class="how-to" id="how-to">
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <h3>Go to GitHub</h3>
+      <p>Open your repo at <code>github.com/ousama-alnemer/governance-docs</code> and click <code>Add file → Upload files</code></p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <h3>Upload your files</h3>
+      <p>Drag and drop Word docs, images, PDFs, or HTML files. Organise in folders if needed. Click <code>Commit changes</code></p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <h3>Update this page</h3>
+      <p>Edit the <code>DOCUMENTS</code> array in this file's script to add your new files — they'll appear as cards instantly</p>
+    </div>
+  </div>
+
+  <div id="no-results">
+    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <h3>No documents found</h3>
+    <p>Try a different search term or filter</p>
+  </div>
+
+  <div id="categories-container"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DOCUMENTS — edit this list to add/remove your files
+//  path: relative URL from the site root
+//  name: display name
+//  type: word | img | html | pdf | other
+//  category: group name shown as section header
+//  size: optional file size label
+// ═══════════════════════════════════════════════════════
+const DOCUMENTS = [
+  {
+    name: "Azure Governance & Compliance",
+    path: "governance.html",
+    type: "html",
+    category: "Governance",
+    size: "Interactive"
+  },
+  {
+    name: "Screenshot 2026-05-17 094323",
+    path: "Screenshot 2026-05-17 094323.png",
+    type: "img",
+    category: "Images",
+    size: ""
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+//  CATEGORY CONFIG — icon + color per category
+// ═══════════════════════════════════════════════════════
+const CAT_CONFIG = {
+  "Governance":    { icon: "🏛", color: "#1a3a5c" },
+  "Policies":      { icon: "📋", color: "#0f766e" },
+  "Diagrams":      { icon: "🗺", color: "#6d28d9" },
+  "Templates":     { icon: "📐", color: "#b45309" },
+  "Security":      { icon: "🔒", color: "#b91c1c" },
+  "Reports":       { icon: "📊", color: "#1d4ed8" },
+  "Images":        { icon: "🖼", color: "#7c3aed" },
+  "Other":         { icon: "📁", color: "#374151" },
+};
+
+const TYPE_ICONS  = { word:"📄", img:"🖼", html:"🌐", pdf:"📕", other:"📎" };
+const TYPE_LABELS = { word:"Word", img:"Image", html:"HTML", pdf:"PDF", other:"File" };
+const TYPE_THUMB  = { word:"type-word", img:"type-img", html:"type-html", pdf:"type-pdf", other:"type-other" };
+const TYPE_BADGE  = { word:"badge-word", img:"badge-img", html:"badge-html", pdf:"badge-pdf", other:"badge-other" };
+
+let activeFilter = "all";
+let searchTerm   = "";
+
+function isImage(type){ return type === "img"; }
+
+function buildCard(doc){
+  const a = document.createElement("a");
+  a.className = "doc-card";
+  a.href = doc.path;
+  a.target = doc.type === "html" ? "_self" : "_blank";
+  a.dataset.type = doc.type;
+  a.dataset.name = doc.name.toLowerCase();
+
+  const thumbClass = TYPE_THUMB[doc.type] || "type-other";
+  const icon       = TYPE_ICONS[doc.type]  || "📎";
+  const label      = TYPE_LABELS[doc.type] || "File";
+  const badge      = TYPE_BADGE[doc.type]  || "badge-other";
+
+  let thumbHtml = "";
+  if(isImage(doc.type)){
+    thumbHtml = `<div class="doc-thumb ${thumbClass}"><img src="${doc.path}" alt="${doc.name}" loading="lazy" onerror="this.parentElement.innerHTML='🖼'"/></div>`;
+  } else {
+    thumbHtml = `<div class="doc-thumb ${thumbClass}">${icon}</div>`;
+  }
+
+  a.innerHTML = `
+    ${thumbHtml}
+    <div class="doc-body">
+      <div class="doc-name">${doc.name}</div>
+      <div class="doc-meta">
+        <span class="doc-type-badge ${badge}">${label}</span>
+        ${doc.size ? `<span class="doc-size">${doc.size}</span>` : ""}
+      </div>
+    </div>`;
+  return a;
+}
+
+function buildUploadCard(){
+  const div = document.createElement("div");
+  div.className = "upload-card";
+  div.innerHTML = `<svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <span>Add files via GitHub</span>`;
+  div.onclick = () => window.open("https://github.com/ousama-alnemer/governance-docs/upload/main","_blank");
+  return div;
+}
+
+function render(){
+  const container = document.getElementById("categories-container");
+  container.innerHTML = "";
+
+  const filtered = DOCUMENTS.filter(d => {
+    const matchFilter = activeFilter === "all" || d.type === activeFilter;
+    const matchSearch = d.name.toLowerCase().includes(searchTerm) ||
+                        (d.category || "").toLowerCase().includes(searchTerm);
+    return matchFilter && matchSearch;
+  });
+
+  if(filtered.length === 0){
+    document.getElementById("no-results").classList.add("show");
+    return;
+  }
+  document.getElementById("no-results").classList.remove("show");
+
+  // Group by category
+  const groups = {};
+  filtered.forEach(d => {
+    const cat = d.category || "Other";
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(d);
+  });
+
+  let totalDelay = 0;
+  Object.entries(groups).forEach(([cat, docs]) => {
+    const cfg = CAT_CONFIG[cat] || { icon:"📁", color:"#374151" };
+
+    const section = document.createElement("div");
+    section.className = "category";
+    section.style.animationDelay = totalDelay + "ms";
+    totalDelay += 60;
+
+    const header = document.createElement("div");
+    header.className = "cat-header";
+    header.innerHTML = `
+      <div class="cat-icon" style="background:${cfg.color}20">${cfg.icon}</div>
+      <span class="cat-title">${cat}</span>
+      <span class="cat-count">${docs.length} file${docs.length!==1?"s":""}</span>`;
+
+    const grid = document.createElement("div");
+    grid.className = "doc-grid";
+
+    docs.forEach((doc, i) => {
+      const card = buildCard(doc);
+      card.style.animationDelay = (totalDelay + i * 40) + "ms";
+      grid.appendChild(card);
+    });
+
+    // Upload prompt card
+    grid.appendChild(buildUploadCard());
+
+    section.appendChild(header);
+    section.appendChild(grid);
+    container.appendChild(section);
+    totalDelay += docs.length * 40 + 40;
+  });
+
+  // Update stats
+  document.getElementById("stat-total").textContent = filtered.length;
+  document.getElementById("stat-cats").textContent  = Object.keys(groups).length;
+}
+
+// Search
+document.getElementById("search").addEventListener("input", e => {
+  searchTerm = e.target.value.toLowerCase().trim();
+  render();
+});
+
+// Filters
+document.getElementById("filters").addEventListener("click", e => {
+  const btn = e.target.closest(".filter-btn");
+  if(!btn) return;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeFilter = btn.dataset.filter;
+  render();
+});
+
+// Initial render
+render();
+
+// Initial stats (all docs)
+document.getElementById("stat-total").textContent = DOCUMENTS.length;
+const cats = new Set(DOCUMENTS.map(d => d.category || "Other"));
+document.getElementById("stat-cats").textContent = cats.size;
+</script>
+</body>
+</html>
