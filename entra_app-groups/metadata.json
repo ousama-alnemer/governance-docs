@@ -1,6 +1,0 @@
-{
-  "name": "Microsoft Entra Management Hub",
-  "description": "A comprehensive web interface to model, manage, audit, and generate automation code for Microsoft Entra ID Security Groups and App Registrations.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
