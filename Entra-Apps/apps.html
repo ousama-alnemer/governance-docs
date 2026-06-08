@@ -347,7 +347,9 @@ function signOut(){sessionStorage.clear();location.href=`https://login.microsoft
 async function exchangeCode(code,scopeType){
   const verifier=sessionStorage.getItem('pkce_verifier');
   const redirectUri=location.origin+location.pathname;
-  const scopes=scopeType==='arm'?'https://management.azure.com/user_impersonation openid profile':'openid profile User.Read User.Read.All Group.ReadWrite.All GroupMember.ReadWrite.All Application.ReadWrite.All Directory.Read.All AuditLog.Read.All';
+  const scopes=scopeType==='arm'?'https://management.azure.com/user_impersonation openid profile'
+    :scopeType==='kv'?'https://vault.azure.net/user_impersonation openid profile'
+    :'openid profile User.Read User.Read.All Group.ReadWrite.All GroupMember.ReadWrite.All Application.ReadWrite.All Directory.Read.All AuditLog.Read.All';
   const body=new URLSearchParams({client_id:CLIENT_ID,grant_type:'authorization_code',code,redirect_uri:redirectUri,code_verifier:verifier,scope:scopes});
   const r=await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
   const d=await r.json();if(d.error)throw new Error(d.error_description||d.error);return d;
@@ -362,6 +364,15 @@ window.addEventListener('load',async()=>{
     try{
       const scopeType=sessionStorage.getItem('pkce_scope')||'graph';
       const tokens=await exchangeCode(code,scopeType);
+      if(scopeType==='kv'){
+        sessionStorage.setItem('kv_token', tokens.access_token);
+        sessionStorage.setItem('kv_expiry', Date.now()+(tokens.expires_in-60)*1000);
+        _token=sessionStorage.getItem('graph_token');_tokenExpiry=parseInt(sessionStorage.getItem('graph_expiry')||'0');
+        _userName=sessionStorage.getItem('user_name')||'';
+        _armToken=sessionStorage.getItem('arm_token')||null;_armExpiry=parseInt(sessionStorage.getItem('arm_expiry')||'0');
+        if(_token){showApp();notify('ok','Key Vault access granted');}
+        return;
+      }
       if(scopeType==='arm'){
         _armToken=tokens.access_token;_armExpiry=Date.now()+(tokens.expires_in-60)*1000;
         sessionStorage.setItem('arm_token',_armToken);sessionStorage.setItem('arm_expiry',_armExpiry);
@@ -422,6 +433,46 @@ document.addEventListener('click',e=>{if(e.target.classList.contains('overlay'))
 </script>
 
 <script>
+const KV_URL = "https://kv-dss-secrets-test.vault.azure.net";
+
+// ── Key Vault helper ──
+async function kvSetSecret(secretName, secretValue) {
+  const t = await tok(true); // uses ARM token scope
+  // KV needs its own scope
+  const kvToken = await getKvToken();
+  const safeName = secretName.replace(/[^a-zA-Z0-9-]/g, '-');
+  const r = await fetch(`${KV_URL}/secrets/${safeName}?api-version=7.4`, {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + kvToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: secretValue })
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({error:{message:r.statusText}})); throw new Error(e.error?.message || r.statusText); }
+  return await r.json();
+}
+
+async function getKvToken() {
+  // Try cached KV token first
+  const cached = sessionStorage.getItem('kv_token');
+  const exp = parseInt(sessionStorage.getItem('kv_expiry') || '0');
+  if (cached && exp > Date.now()) return cached;
+  // Get new KV token via PKCE redirect
+  const { verifier, challenge } = await genPKCE();
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_scope', 'kv');
+  sessionStorage.setItem('kv_pending_action', JSON.stringify({ action: 'resume' }));
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: location.origin + location.pathname,
+    response_mode: 'query',
+    scope: 'https://vault.azure.net/user_impersonation openid profile',
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
+  location.href = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+  throw new Error('Redirecting for KV auth…');
+}
+
 const GRAPH_PERMS=[
   {n:"User.Read",a:false},{n:"User.ReadBasic.All",a:true},{n:"User.Read.All",a:true},{n:"User.ReadWrite.All",a:true},
   {n:"Directory.Read.All",a:true},{n:"Directory.ReadWrite.All",a:true},{n:"Group.Read.All",a:true},{n:"Group.ReadWrite.All",a:true},
@@ -570,14 +621,20 @@ async function runCreateApp(){
     let sv='(no secret)';
     if(doSecret){const exp=new Date();exp.setFullYear(exp.getFullYear()+dur);const s=await gPost(`/applications/${objId}/addPassword`,{passwordCredential:{displayName:`${name}-secret`,endDateTime:exp.toISOString()}});sv=s.secretText;log('logApps','ok','Secret created');}
     closeModal('mCreateApp');await loadApps();
-    if(doSecret&&confirm(`Client ID: ${appId}\nClient Secret: ${sv}\n\nCopy to clipboard?`)){navigator.clipboard.writeText(`Client-ID: ${appId}\nClient-Secret: ${sv}`).catch(()=>{});notify('ok','Copied!');}
-    else if(!doSecret)notify('ok',`App ${existing?'updated':'created'}: ${name}`);
+    if(doSecret){
+      showSecretModal(name, appId, sv);
+      saveToKeyVault(name, appId, sv, name+'-secret');
+    } else {
+      notify('ok', `App ${existing?'updated':'created'}: ${name}`);
+    }
   }catch(e){log('logApps','err',e.message);notify('err',e.message);}
 }
 
 async function viewSecrets(id,name,cid){
   document.getElementById('mSecretsTitle').textContent=`🔑 ${name}`;
-  document.getElementById('mSecrets').dataset.id=id;document.getElementById('mSecrets').dataset.name=name;
+  document.getElementById('mSecrets').dataset.id=id;
+  document.getElementById('mSecrets').dataset.name=name;
+  document.getElementById('mSecrets').dataset.appid=cid||'';
   document.getElementById('mSecretsBody').innerHTML='<div style="color:var(--muted)"><span class="spin"></span>Loading…</div>';
   openModal('mSecrets');
   try{
@@ -588,11 +645,104 @@ async function viewSecrets(id,name,cid){
   }catch(e){document.getElementById('mSecretsBody').innerHTML=`<p style="color:var(--danger)">${esc(e.message)}</p>`;}
 }
 async function addNewSecret(){
-  const id=document.getElementById('mSecrets').dataset.id,name=document.getElementById('mSecrets').dataset.name;
-  const sn=prompt(`Secret name:`,`${name}-secret`);if(!sn)return;
-  const dur=parseInt(prompt('Years (1,2,99):','1')||'1');
-  try{const exp=new Date();exp.setFullYear(exp.getFullYear()+dur);const s=await gPost(`/applications/${id}/addPassword`,{passwordCredential:{displayName:sn,endDateTime:exp.toISOString()}});if(confirm('Copy secret?\n\n'+s.secretText)){navigator.clipboard.writeText(s.secretText).catch(()=>{});}viewSecrets(id,name,'');}
-  catch(e){notify('err',e.message);}
+  const id = document.getElementById('mSecrets').dataset.id;
+  const name = document.getElementById('mSecrets').dataset.name;
+  const appId = document.getElementById('mSecrets').dataset.appid || '';
+  const sn = prompt(`Secret display name:`, `${name}-secret`);
+  if (!sn) return;
+  const dur = parseInt(prompt('Duration in years (1, 2, or 99):', '1') || '1');
+  try {
+    const exp = new Date(); exp.setFullYear(exp.getFullYear() + dur);
+    const s = await gPost(`/applications/${id}/addPassword`, {
+      passwordCredential: { displayName: sn, endDateTime: exp.toISOString() }
+    });
+    // Show copy modal immediately
+    showSecretModal(name, appId, s.secretText);
+    // Save to Key Vault in background
+    saveToKeyVault(name, appId, s.secretText, sn);
+    viewSecrets(id, name, appId);
+  } catch(e) { notify('err', e.message); }
+}
+
+function showSecretModal(appName, appId, secretValue) {
+  // Build modal HTML
+  const existing = document.getElementById('secretCopyModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'secretCopyModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;width:540px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Arial,sans-serif">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
+        <h2 style="font-size:17px;font-weight:700;color:#1a3a5c">Secret Created Successfully</h2>
+      </div>
+      <p style="font-size:13px;color:#888;margin-bottom:20px">⚠ Copy these credentials now — the secret value is only shown once and is being saved to Key Vault automatically.</p>
+
+      ${credRow('Application (Client) ID', appId || CLIENT_ID)}
+      ${credRow('Client Secret', secretValue, true)}
+      ${credRow('Tenant ID', TENANT_ID)}
+
+      <div style="display:flex;gap:10px;margin-top:24px">
+        <button onclick="copyAllCreds('${esc(appId||CLIENT_ID)}','${esc(secretValue)}','${esc(TENANT_ID)}')"
+          style="flex:1;padding:11px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+          📋 Copy All to Clipboard
+        </button>
+        <button onclick="document.getElementById('secretCopyModal').remove()"
+          style="padding:11px 20px;background:#f3f4f6;color:#444;border:1px solid #ddd;border-radius:8px;font-size:14px;cursor:pointer">
+          Close
+        </button>
+      </div>
+
+      <div id="kvSaveStatus" style="margin-top:14px;font-size:12px;color:#888;text-align:center;font-family:monospace">
+        <span class="spin"></span> Saving to Key Vault…
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+}
+
+function credRow(label, value, masked) {
+  const display = masked ? value.substring(0,8) + '••••••••••••••••' : value;
+  const id = 'cred_' + Math.random().toString(36).substr(2,6);
+  return `
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-family:monospace">${label}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;background:#f4f5f7;border:1px solid #e0e3e8;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:#1a3a5c;word-break:break-all" id="${id}">${esc(display)}</div>
+        <button onclick="copyField('${id}','${esc(value)}')"
+          style="padding:8px 14px;background:#fff;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;color:#555">
+          Copy
+        </button>
+      </div>
+    </div>`;
+}
+
+function copyField(displayId, value) {
+  navigator.clipboard.writeText(value).then(() => {
+    const el = document.getElementById(displayId);
+    if (el) { const orig = el.style.background; el.style.background='#dcfce7'; setTimeout(()=>el.style.background=orig, 1000); }
+    notify('ok', 'Copied!');
+  }).catch(() => notify('err', 'Copy failed'));
+}
+
+function copyAllCreds(appId, secret, tenantId) {
+  const text = `Application (Client) ID: ${appId}\nClient Secret: ${secret}\nTenant ID: ${tenantId}`;
+  navigator.clipboard.writeText(text).then(() => notify('ok', 'All credentials copied!')).catch(() => notify('err', 'Copy failed'));
+}
+
+async function saveToKeyVault(appName, appId, secretValue, secretDisplayName) {
+  const statusEl = document.getElementById('kvSaveStatus');
+  try {
+    const kvName = appName.replace(/[^a-zA-Z0-9-]/g, '-').substring(0, 100);
+    await kvSetSecret(kvName, secretValue);
+    if (statusEl) statusEl.innerHTML = '✅ Saved to Key Vault: <code>' + KV_URL.replace('https://','') + '/secrets/' + kvName + '</code>';
+    notify('ok', 'Secret saved to Key Vault!');
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '⚠ Key Vault save failed: ' + esc(e.message) + ' — credentials still shown above';
+    notify('warn', 'KV save failed — copy credentials manually');
+  }
 }
 async function delApp(id,name){if(!confirm(`Delete "${name}"?`))return;try{await gDel(`/applications/${id}`);notify('ok','Deleted: '+name);loadApps();}catch(e){notify('err',e.message);}}
 function exportApps(){const rows=[['App Name','App ID','Created','Secrets','Has Expired']];const now=new Date();_apps.forEach(a=>{const c=a.passwordCredentials||[];rows.push([a.displayName,a.appId,a.createdDateTime?.split('T')[0]||'',c.length,c.some(x=>x.endDateTime&&new Date(x.endDateTime)<=now)?'YES':'NO']);});dlCsv('apps.csv',rows);}
