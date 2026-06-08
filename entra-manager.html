@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Azure Security & App Management</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -508,7 +508,7 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
 <script>
 const CLIENT_ID="287cb9b4-e827-4a70-a2fe-4f6bf6668cc3";
 const TENANT_ID="d20204de-f10a-44f3-9daa-9cedec0db4d2";
-const SCOPES=["User.Read","User.ReadBasic.All","User.Read.All","Group.ReadWrite.All","GroupMember.ReadWrite.All","Application.ReadWrite.All","Directory.Read.All","AuditLog.Read.All","https://management.azure.com/user_impersonation"];
+// SCOPES handled by PKCE flow
 const GRAPH_PERMS=[
   {n:"User.Read",a:false},{n:"User.ReadBasic.All",a:true},{n:"User.Read.All",a:true},{n:"User.ReadWrite.All",a:true},
   {n:"Directory.Read.All",a:true},{n:"Directory.ReadWrite.All",a:true},{n:"Group.Read.All",a:true},{n:"Group.ReadWrite.All",a:true},
@@ -516,35 +516,193 @@ const GRAPH_PERMS=[
   {n:"Mail.Read",a:false},{n:"Mail.Send",a:false},{n:"Files.Read.All",a:false},{n:"Sites.Read.All",a:true},
   {n:"AuditLog.Read.All",a:true},{n:"Reports.Read.All",a:true},{n:"RoleManagement.Read.Directory",a:true},{n:"IdentityRiskyUser.Read.All",a:true}
 ];
-let ms,acct,_apps=[],_sg=[],_sgMembers=[],_sgOwners=[],_sp=[],_secrets=[],_auditLogs=[],_costData=[],_subs=[];
+let _apps=[],_sg=[],_sgMembers=[],_sgOwners=[],_sp=[],_secrets=[],_auditLogs=[],_costData=[],_subs=[];
 let _selSGId=null,_selSGName='',_addMU=null,_addOU=null,_costPeriod='daily';
 let _checkedPerms=new Set();
 let _cachedUsers={};
 
-window.addEventListener('load',async()=>{
-  try{
-    ms=new msal.PublicClientApplication({auth:{clientId:CLIENT_ID,authority:`https://login.microsoftonline.com/${TENANT_ID}`,redirectUri:location.href.split('?')[0].split('#')[0]},cache:{cacheLocation:"sessionStorage"}});
-    await ms.initialize();
-    const r=await ms.handleRedirectPromise();
-    if(r)setAcct(r.account);
-    else{const a=ms.getAllAccounts();if(a.length)setAcct(a[0]);}
-  }catch(e){notify('err','Init: '+e.message);}
+// ── PURE OAUTH2 PKCE AUTH (no external library) ──
+let _token = null, _tokenExpiry = 0, _armToken = null, _armExpiry = 0;
+let _userName = '', _msalReady = false;
+
+// PKCE helpers
+function b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function sha256(plain) {
+  const enc = new TextEncoder().encode(plain);
+  return crypto.subtle.digest('SHA-256', enc);
+}
+async function genPKCE() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(await sha256(verifier));
+  return { verifier, challenge };
+}
+
+async function signIn() {
+  const { verifier, challenge } = await genPKCE();
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_scope', 'graph');
+  const redirectUri = location.origin + location.pathname;
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    response_mode: 'query',
+    scope: 'openid profile User.Read User.Read.All Group.ReadWrite.All GroupMember.ReadWrite.All Application.ReadWrite.All Directory.Read.All AuditLog.Read.All',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    state: 'graph'
+  });
+  location.href = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+}
+
+async function signInARM() {
+  const { verifier, challenge } = await genPKCE();
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_scope', 'arm');
+  const redirectUri = location.origin + location.pathname;
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    response_mode: 'query',
+    scope: 'https://management.azure.com/user_impersonation openid profile',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    state: 'arm'
+  });
+  location.href = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+}
+
+function signOut() {
+  sessionStorage.clear();
+  location.href = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/logout?post_logout_redirect_uri=${encodeURIComponent(location.origin + location.pathname)}`;
+}
+
+async function exchangeCode(code, scope) {
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  const redirectUri = location.origin + location.pathname;
+  const scopes = scope === 'arm'
+    ? 'https://management.azure.com/user_impersonation openid profile'
+    : 'openid profile User.Read User.Read.All Group.ReadWrite.All GroupMember.ReadWrite.All Application.ReadWrite.All Directory.Read.All AuditLog.Read.All';
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: verifier,
+    scope: scopes
+  });
+  const r = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error_description || d.error);
+  return d;
+}
+
+window.addEventListener('load', async () => {
   buildPermGrid('');
-  const now=new Date(),fmt=d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
-  document.getElementById('costFrom').value=fmt(new Date(now-7*864e5));
-  document.getElementById('costTo').value=fmt(now);
+  const now = new Date(), fmt = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+  document.getElementById('costFrom').value = fmt(new Date(now - 7*864e5));
+  document.getElementById('costTo').value = fmt(now);
+
+  // Check if returning from OAuth redirect
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+
+  if (code) {
+    // Clean URL
+    history.replaceState({}, '', location.pathname);
+    try {
+      const scopeType = sessionStorage.getItem('pkce_scope') || 'graph';
+      const tokens = await exchangeCode(code, scopeType);
+
+      if (scopeType === 'arm') {
+        _armToken = tokens.access_token;
+        _armExpiry = Date.now() + (tokens.expires_in - 60) * 1000;
+        sessionStorage.setItem('arm_token', _armToken);
+        sessionStorage.setItem('arm_expiry', _armExpiry);
+        // Restore graph session
+        _token = sessionStorage.getItem('graph_token');
+        _tokenExpiry = parseInt(sessionStorage.getItem('graph_expiry') || '0');
+        _userName = sessionStorage.getItem('user_name') || '';
+        if (_token) {
+          showApp();
+          notify('ok', 'Azure subscription access granted');
+          loadSubs();
+        }
+      } else {
+        _token = tokens.access_token;
+        _tokenExpiry = Date.now() + (tokens.expires_in - 60) * 1000;
+        sessionStorage.setItem('graph_token', _token);
+        sessionStorage.setItem('graph_expiry', _tokenExpiry);
+        // Get user info
+        const me = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: { Authorization: 'Bearer ' + _token }
+        }).then(r => r.json());
+        _userName = me.userPrincipalName || me.displayName || '';
+        sessionStorage.setItem('user_name', _userName);
+        showApp();
+      }
+    } catch(e) {
+      notify('err', 'Auth error: ' + e.message);
+      console.error(e);
+    }
+    return;
+  }
+
+  // Check for existing session
+  const gt = sessionStorage.getItem('graph_token');
+  const ge = parseInt(sessionStorage.getItem('graph_expiry') || '0');
+  if (gt && ge > Date.now()) {
+    _token = gt;
+    _tokenExpiry = ge;
+    _userName = sessionStorage.getItem('user_name') || '';
+    _armToken = sessionStorage.getItem('arm_token') || null;
+    _armExpiry = parseInt(sessionStorage.getItem('arm_expiry') || '0');
+    showApp();
+  }
+  _msalReady = true;
 });
+
+function showApp() {
+  _msalReady = true;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('userLabel').textContent = _userName;
+  loadApps();
+  loadGuestGroups();
+  loadSubs();
+}
 const p2=n=>String(n).padStart(2,'0');
-async function signIn(){document.getElementById('loginBtn').innerHTML='<span class="spin"></span>Signing in…';try{await ms.loginRedirect({scopes:SCOPES});}catch(e){document.getElementById('loginBtn').textContent='Sign in with Microsoft';alert(e.message);}}
-function signOut(){ms.logoutRedirect();}
-function setAcct(a){acct=a;document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='block';document.getElementById('userLabel').textContent=a.username;loadApps();loadGuestGroups();loadSubs();}
-async function tok(arm){
-  const sc=arm?['https://management.azure.com/user_impersonation']:SCOPES.filter(s=>!s.includes('management'));
-  try{const r=await ms.acquireTokenSilent({scopes:sc,account:acct});return r.accessToken;}
-  catch{const r=await ms.acquireTokenPopup({scopes:sc,account:acct});return r.accessToken;}
+// signIn() defined in PKCE auth section above
+// signOut defined above in PKCE section
+// setAcct replaced by showApp() in PKCE flow
+async function tok(isArm) {
+  if (isArm) {
+    if (_armToken && _armExpiry > Date.now()) return _armToken;
+    // Need ARM token - redirect to get it
+    notify('info', 'Requesting Azure subscription access...');
+    setTimeout(() => signInARM(), 1500);
+    throw new Error('ARM token needed - redirecting to login');
+  }
+  if (_token && _tokenExpiry > Date.now()) return _token;
+  notify('err', 'Session expired - please sign in again');
+  setTimeout(() => {
+    sessionStorage.clear();
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }, 2000);
+  throw new Error('Token expired');
 }
 async function gGet(url){
-  const t=await tok();const base=url.startsWith('http')?url:`https://graph.microsoft.com/v1.0${url}`;
+  const t=await tok();const base=url.startsWith('http')?url:('https://graph.microsoft.com/v1.0'+url);
   const r=await fetch(base,{headers:{Authorization:'Bearer '+t,'ConsistencyLevel':'eventual'}});
   if(!r.ok){const e=await r.json().catch(()=>({error:{message:r.statusText}}));throw new Error(e.error?.message||r.statusText);}
   return r.json();
@@ -560,8 +718,8 @@ async function gPatch(url,body){
 }
 async function gDel(url){const t=await tok();const r=await fetch(`https://graph.microsoft.com/v1.0${url}`,{method:'DELETE',headers:{Authorization:'Bearer '+t}});if(!r.ok)throw new Error(r.statusText);}
 async function gAll(url){let items=[],next=url;while(next){const d=await gGet(next);items=items.concat(d.value||[]);next=d['@odata.nextLink']?.replace('https://graph.microsoft.com/v1.0','')||null;}return items;}
-async function arm(url){const t=await tok(true);const r=await fetch(`https://management.azure.com${url}`,{headers:{Authorization:'Bearer '+t}});if(!r.ok){const e=await r.json().catch(()=>({error:{message:r.statusText}}));throw new Error(e.error?.message||r.statusText);}return r.json();}
-async function armPost(url,body){const t=await tok(true);const r=await fetch(`https://management.azure.com${url}`,{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok){const e=await r.json().catch(()=>({error:{message:r.statusText}}));throw new Error(e.error?.message||r.statusText);}return r.json();}
+async function arm(url){const t=await tok(true);const r=await fetch('https://management.azure.com'+url,{headers:{Authorization:'Bearer '+t}});if(!r.ok){const e=await r.json().catch(()=>({error:{message:r.statusText}}));throw new Error(e.error?.message||r.statusText);}return r.json();}
+async function armPost(url,body){const t=await tok(true);const r=await fetch('https://management.azure.com'+url,{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok){const e=await r.json().catch(()=>({error:{message:r.statusText}}));throw new Error(e.error?.message||r.statusText);}return r.json();}
 
 function goTab(id,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');}
 function openModal(id){document.getElementById(id).classList.add('open');}
