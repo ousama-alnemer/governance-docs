@@ -370,7 +370,21 @@ window.addEventListener('load',async()=>{
         _token=sessionStorage.getItem('graph_token');_tokenExpiry=parseInt(sessionStorage.getItem('graph_expiry')||'0');
         _userName=sessionStorage.getItem('user_name')||'';
         _armToken=sessionStorage.getItem('arm_token')||null;_armExpiry=parseInt(sessionStorage.getItem('arm_expiry')||'0');
-        if(_token){showApp();notify('ok','Key Vault access granted');}
+        if(_token){
+          showApp();
+          // Resume pending action after KV auth
+          const pendingAction = sessionStorage.getItem('kv_pending_action');
+          if(pendingAction==='fetchSecret'){
+            const pName = sessionStorage.getItem('kv_pending_app_name')||'';
+            const pId   = sessionStorage.getItem('kv_pending_app_id')||'';
+            sessionStorage.removeItem('kv_pending_action');
+            sessionStorage.removeItem('kv_pending_app_name');
+            sessionStorage.removeItem('kv_pending_app_id');
+            setTimeout(()=>showKVSearchModal(pName, pId, tokens.access_token), 500);
+          } else {
+            notify('ok','Key Vault access granted');
+          }
+        }
         return;
       }
       if(scopeType==='arm'){
@@ -596,6 +610,7 @@ function renderApps(){
       <td style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="btn btn-p" style="font-size:11px;padding:3px 8px" onclick="openAppDetails('${esc(a.id)}','${esc(a.appId||'')}','${esc(a.displayName||'')}')">📋 Details</button>
         <button class="btn btn-o" style="font-size:11px;padding:3px 8px" onclick="viewSecrets('${esc(a.id)}','${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔑 Secrets</button>
+        <button class="btn btn-w" style="font-size:11px;padding:3px 8px" onclick="fetchSecretFromKV('${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔓 Get Secret</button>
         <button class="btn btn-d" style="font-size:11px;padding:3px 8px" onclick="delApp('${esc(a.id)}','${esc(a.displayName||'')}')">🗑</button>
       </td></tr>`;
   }).join('');
@@ -1111,6 +1126,208 @@ function filterByEnvStat(envKey, secVal){
   else['scExpired','scExp90','scExp30'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='transparent';});
   renderApps();
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── FETCH SECRET FROM KEY VAULT BY APP NAME (first 3 chars match) ──
+async function fetchSecretFromKV(appName, appId) {
+  try {
+    // Get KV token
+    const kvToken = await getKvTokenSilent();
+    if (!kvToken) {
+      notify('info', 'Getting Key Vault access…');
+      // Trigger KV auth, save pending action to resume after redirect
+      sessionStorage.setItem('kv_pending_app_name', appName);
+      sessionStorage.setItem('kv_pending_app_id', appId);
+      sessionStorage.setItem('kv_pending_action', 'fetchSecret');
+      await getKvToken(); // will redirect
+      return;
+    }
+    await doFetchSecretFromKV(appName, appId, kvToken);
+  } catch(e) {
+    if (e.message && e.message.includes('Redirecting')) return;
+    notify('err', 'KV error: ' + e.message);
+  }
+}
+
+async function getKvTokenSilent() {
+  const cached = sessionStorage.getItem('kv_token');
+  const exp = parseInt(sessionStorage.getItem('kv_expiry') || '0');
+  if (cached && exp > Date.now()) return cached;
+  return null;
+}
+
+async function doFetchSecretFromKV(appName, appId, kvToken) {
+  // Show searching modal immediately
+  showKVSearchModal(appName, appId, kvToken);
+}
+
+function showKVSearchModal(appName, appId, kvToken) {
+  const existing = document.getElementById('kvSearchModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'kvSearchModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;width:580px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Arial,sans-serif">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:20px">🔐</span>
+        <h2 style="font-size:17px;font-weight:700;color:#1a3a5c">Key Vault — Get Secret</h2>
+        <button onclick="document.getElementById('kvSearchModal').remove()" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <p style="font-size:13px;color:#888;margin-bottom:16px">
+        Searching <code style="color:#1a6ef5">${esc(KV_URL.replace('https://',''))}</code> for secrets matching <strong>${esc(appName)}</strong>
+      </p>
+
+      <!-- Search prefix row -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Match prefix (first N characters)</div>
+          <input id="kvPrefixInput" value="${esc(appName.substring(0,3))}" 
+            style="width:100%;padding:9px 12px;border:1.5px solid #d0d4db;border-radius:7px;font-size:14px;font-family:monospace"
+            onkeydown="if(event.key==='Enter')searchKVSecrets('${esc(appName)}','${esc(appId)}')"/>
+        </div>
+        <button onclick="searchKVSecrets('${esc(appName)}','${esc(appId)}')"
+          style="padding:9px 18px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">
+          🔍 Search
+        </button>
+      </div>
+
+      <!-- Progress bar -->
+      <div id="kvSearchProgress" style="display:none;margin-bottom:12px">
+        <div style="font-size:12px;color:#888;font-family:monospace;margin-bottom:4px" id="kvSearchProgressLabel">Listing secrets…</div>
+        <div style="height:4px;background:#e0e3e8;border-radius:2px;overflow:hidden">
+          <div id="kvSearchProgressFill" style="height:100%;background:#1a6ef5;border-radius:2px;width:0%;transition:width .3s ease"></div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="kvSearchResults" style="max-height:320px;overflow-y:auto;border:1px solid #e0e3e8;border-radius:10px;display:none">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f4f5f7">
+            <th style="padding:9px 13px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e0e3e8">Secret Name</th>
+            <th style="padding:9px 13px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e0e3e8">Match Score</th>
+            <th style="padding:9px 13px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e0e3e8">Actions</th>
+          </tr></thead>
+          <tbody id="kvResultsTbody"></tbody>
+        </table>
+      </div>
+      <div id="kvSearchEmpty" style="display:none;text-align:center;padding:24px;color:#888;font-size:13px">No matching secrets found</div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+
+  // Auto-search on open with first 3 chars
+  searchKVSecrets(appName, appId);
+}
+
+async function searchKVSecrets(appName, appId) {
+  const prefix = (document.getElementById('kvPrefixInput')?.value || appName.substring(0,3)).toLowerCase();
+  const progressWrap = document.getElementById('kvSearchProgress');
+  const progressFill = document.getElementById('kvSearchProgressFill');
+  const progressLabel = document.getElementById('kvSearchProgressLabel');
+  const resultsDiv = document.getElementById('kvSearchResults');
+  const emptyDiv = document.getElementById('kvSearchEmpty');
+  const tbody = document.getElementById('kvResultsTbody');
+
+  if (progressWrap) progressWrap.style.display = 'block';
+  if (resultsDiv) resultsDiv.style.display = 'none';
+  if (emptyDiv) emptyDiv.style.display = 'none';
+  if (progressFill) { progressFill.style.width = '15%'; }
+  if (progressLabel) progressLabel.textContent = 'Listing all secrets in Key Vault…';
+
+  try {
+    const kvToken = sessionStorage.getItem('kv_token');
+    if (!kvToken) { notify('err', 'No KV token — please try again'); return; }
+
+    // List all secrets
+    const r = await fetch(`${KV_URL}/secrets?api-version=7.4&maxresults=200`, {
+      headers: { Authorization: 'Bearer ' + kvToken }
+    });
+    if (!r.ok) throw new Error('KV list failed: ' + r.status + ' ' + r.statusText);
+    const data = await r.json();
+    const secrets = data.value || [];
+
+    if (progressFill) progressFill.style.width = '60%';
+    if (progressLabel) progressLabel.textContent = `Found ${secrets.length} secrets — filtering by "${prefix}"…`;
+
+    // Filter by prefix match (first N chars of secret name)
+    const appNameClean = appName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const matched = secrets
+      .map(s => {
+        const name = s.id.split('/').pop().toLowerCase();
+        const prefixMatch = name.startsWith(prefix);
+        const appMatch = name.startsWith(appNameClean.substring(0, prefix.length));
+        // Score: exact prefix match = 3, app name prefix = 2, contains prefix = 1
+        const score = name === appNameClean ? 4
+          : name.startsWith(appNameClean) ? 3
+          : prefixMatch ? 2
+          : name.includes(prefix) ? 1 : 0;
+        return { name: s.id.split('/').pop(), id: s.id, score, enabled: s.attributes?.enabled !== false };
+      })
+      .filter(s => s.score > 0)
+      .sort((a,b) => b.score - a.score);
+
+    if (progressFill) progressFill.style.width = '100%';
+    setTimeout(() => { if(progressWrap) progressWrap.style.display='none'; }, 600);
+
+    if (!matched.length) {
+      if (emptyDiv) emptyDiv.style.display = 'block';
+      return;
+    }
+
+    // Render results
+    if (resultsDiv) resultsDiv.style.display = 'block';
+    const scoreLabel = s => s===4?'<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Exact</span>'
+      :s===3?'<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">App Name</span>'
+      :s===2?'<span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Prefix</span>'
+      :'<span style="background:#f3f4f6;color:#555;padding:2px 8px;border-radius:5px;font-size:11px">Contains</span>';
+
+    tbody.innerHTML = matched.map(s => `<tr style="border-bottom:1px solid #e0e3e8">
+      <td style="padding:10px 13px;font-family:monospace;font-size:12px;color:#1a3a5c">
+        ${esc(s.name)}
+        ${!s.enabled ? '<span style="color:#d63031;font-size:10px;margin-left:4px">(disabled)</span>' : ''}
+      </td>
+      <td style="padding:10px 13px">${scoreLabel(s.score)}</td>
+      <td style="padding:10px 13px">
+        <button onclick="retrieveKVSecret('${esc(s.name)}','${esc(appId)}')"
+          style="padding:5px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+          🔓 Retrieve
+        </button>
+      </td>
+    </tr>`).join('');
+
+  } catch(e) {
+    if (progressWrap) progressWrap.style.display = 'none';
+    notify('err', 'KV search error: ' + e.message);
+  }
+}
+
+async function retrieveKVSecret(secretName, appId) {
+  try {
+    const kvToken = sessionStorage.getItem('kv_token');
+    if (!kvToken) { notify('err', 'No KV token'); return; }
+
+    const r = await fetch(`${KV_URL}/secrets/${secretName}?api-version=7.4`, {
+      headers: { Authorization: 'Bearer ' + kvToken }
+    });
+    if (!r.ok) throw new Error('KV get failed: ' + r.status + ' ' + r.statusText);
+    const data = await r.json();
+    const secretValue = data.value;
+
+    // Close search modal
+    const sm = document.getElementById('kvSearchModal');
+    if (sm) sm.remove();
+
+    // Show copy modal with retrieved secret
+    showSecretModal(secretName, appId || CLIENT_ID, secretValue);
+    // Don't re-save to KV since it came from there
+    const statusEl = document.getElementById('kvSaveStatus');
+    if (statusEl) statusEl.innerHTML = '✅ Retrieved from Key Vault: <code>' + esc(secretName) + '</code>';
+
+  } catch(e) {
+    notify('err', 'Retrieve error: ' + e.message);
+  }
 }
 
 function exportAppDetails(){
