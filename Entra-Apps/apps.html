@@ -186,11 +186,18 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
   </div>
 </div>
 <div class="stats" id="appStats" style="display:none">
-  <div class="sc"><div class="sc-n" id="as0">0</div><div class="sc-l">Total</div></div>
-  <div class="sc"><div class="sc-n" style="color:var(--accent2)" id="as1">0</div><div class="sc-l">Active Secrets</div></div>
-  <div class="sc"><div class="sc-n" style="color:var(--danger)" id="as2">0</div><div class="sc-l">Expired</div></div>
-  <div class="sc"><div class="sc-n" style="color:var(--warn)" id="as3">0</div><div class="sc-l">Expiring &lt;90d</div></div>
-  <div class="sc"><div class="sc-n" style="color:var(--muted)" id="as4">0</div><div class="sc-l">No Secrets</div></div>
+  <div class="sc" style="cursor:pointer" onclick="filterByStat(0)" title="Show all apps">
+    <div class="sc-n" id="as0">0</div><div class="sc-l">Total</div></div>
+  <div class="sc" style="cursor:pointer" onclick="filterByStat(3)" title="Show apps with active secrets">
+    <div class="sc-n" style="color:var(--accent2)" id="as1">0</div><div class="sc-l">✅ Active Secrets</div></div>
+  <div class="sc" style="cursor:pointer;border:2px solid transparent" id="scExpired" onclick="filterByStat(4)" title="Click to see expired apps">
+    <div class="sc-n" style="color:var(--danger)" id="as2">0</div><div class="sc-l">🔴 Expired</div></div>
+  <div class="sc" style="cursor:pointer;border:2px solid transparent" id="scExp90" onclick="filterByStat(5)" title="Click to see apps expiring in 90 days">
+    <div class="sc-n" style="color:var(--warn)" id="as3">0</div><div class="sc-l">⚠ Expiring &lt;90d</div></div>
+  <div class="sc" style="cursor:pointer;border:2px solid transparent" id="scExp30" onclick="filterByStat(6)" title="Click to see apps expiring in 30 days">
+    <div class="sc-n" style="color:var(--warn)" id="as5">0</div><div class="sc-l">🔥 Expiring &lt;30d</div></div>
+  <div class="sc" style="cursor:pointer" onclick="filterByStat(2)" title="Show apps with no secrets">
+    <div class="sc-n" style="color:var(--muted)" id="as4">0</div><div class="sc-l">No Secrets</div></div>
 </div>
 <div class="tbl-wrap sc2">
   <table><thead><tr>
@@ -397,6 +404,27 @@ async function loadApps(){
   catch(e){document.getElementById('appTbody').innerHTML=`<tr class="erow"><td colspan="6">❌ ${esc(e.message)}</td></tr>`;log('logApps','err',e.message);}
 }
 
+function highlightStat(id){
+  ['scExpired','scExp90','scExp30'].forEach(x=>{const el=document.getElementById(x);if(el)el.style.borderColor='transparent';});
+  const el=document.getElementById(id);
+  if(el)el.style.borderColor='var(--accent)';
+}
+
+function filterByStat(secValue){
+  // Set the secret status dropdown
+  document.getElementById('appSecF').value=String(secValue);
+  // Hide date range unless custom
+  toggleDateRange();
+  // Highlight the clicked card
+  if(secValue===4)highlightStat('scExpired');
+  else if(secValue===5)highlightStat('scExp90');
+  else if(secValue===6)highlightStat('scExp30');
+  else{['scExpired','scExp90','scExp30'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='transparent';});}
+  // Scroll to table
+  document.getElementById('appTbody').closest('.tbl-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+  renderApps();
+}
+
 function toggleDateRange(){
   const sec=parseInt(document.getElementById('appSecF').value);
   const show=sec===7;
@@ -452,9 +480,15 @@ function renderApps(){
     }
     return true;
   });
-  let a1=0,a2=0,a3=0,a4=0;
-  _apps.forEach(a=>{const c=a.passwordCredentials||[];const hA=c.some(x=>x.endDateTime&&new Date(x.endDateTime)>now);const hE=c.some(x=>x.endDateTime&&new Date(x.endDateTime)<=now);const hS=c.some(x=>x.endDateTime&&new Date(x.endDateTime)>now&&(new Date(x.endDateTime)-now)/864e5<90);if(hA)a1++;if(hE)a2++;if(hS)a3++;if(!c.length)a4++;});
-  document.getElementById('as0').textContent=_apps.length;document.getElementById('as1').textContent=a1;document.getElementById('as2').textContent=a2;document.getElementById('as3').textContent=a3;document.getElementById('as4').textContent=a4;
+  let a1=0,a2=0,a3=0,a4=0,a5=0;
+  _apps.forEach(a=>{const c=a.passwordCredentials||[];const hA=c.some(x=>x.endDateTime&&new Date(x.endDateTime)>now);const hE=c.some(x=>x.endDateTime&&new Date(x.endDateTime)<=now);const hS=c.some(x=>x.endDateTime&&new Date(x.endDateTime)>now&&(new Date(x.endDateTime)-now)/864e5<90);const hS30=c.some(x=>x.endDateTime&&new Date(x.endDateTime)>now&&(new Date(x.endDateTime)-now)/864e5<30);if(hA)a1++;if(hE)a2++;if(hS)a3++;if(!c.length)a4++;if(hS30)a5++;});
+  document.getElementById('as0').textContent=_apps.length;document.getElementById('as1').textContent=a1;document.getElementById('as2').textContent=a2;document.getElementById('as3').textContent=a3;document.getElementById('as4').textContent=a4;document.getElementById('as5').textContent=a5;
+  // Highlight active stat card
+  ['scExpired','scExp90','scExp30'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='transparent';});
+  const curSec=parseInt(document.getElementById('appSecF').value);
+  if(curSec===4)highlightStat('scExpired');
+  else if(curSec===5)highlightStat('scExp90');
+  else if(curSec===6)highlightStat('scExp30');
   const tbody=document.getElementById('appTbody');
   if(!f.length){tbody.innerHTML='<tr class="erow"><td colspan="6">No apps match</td></tr>';return;}
   tbody.innerHTML=f.sort((a,b)=>(a.displayName||'').localeCompare(b.displayName||'')).map(a=>{
