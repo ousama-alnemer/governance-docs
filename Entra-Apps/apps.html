@@ -101,6 +101,13 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
 .perm-item:hover{background:var(--card3)}
 .perm-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .perm-admin{color:var(--warn);font-size:10px;font-family:var(--mono)}
+.progress-wrap{margin:10px 0;display:none}
+.progress-wrap.show{display:block}
+.progress-bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease}
+.progress-bar-fill.indeterminate{width:40%;animation:indeterminate 1.4s ease-in-out infinite}
+@keyframes indeterminate{0%{margin-left:-40%}100%{margin-left:100%}}
+.progress-label{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:4px}
 @media(max-width:800px){.split{grid-template-columns:1fr}.main{padding:12px}}
 </style>
 </head>
@@ -669,28 +676,111 @@ async function loadAppSP(){
     tbody.innerHTML=assigns.length?assigns.map(a=>`<tr><td><strong>${esc(a.principalDisplayName||'')}</strong></td><td><span class="b ${a.principalType==='Group'?'b-g':a.principalType==='ServicePrincipal'?'b-b':'b-gr'}">${esc(a.principalType||'')}</span></td><td class="mono">${esc(a.appRoleId==='00000000-0000-0000-0000-000000000000'?'Default Access':a.appRoleId)}</td><td>${a.createdDateTime?new Date(a.createdDateTime).toLocaleDateString():'—'}</td></tr>`).join(''):'<tr class="erow"><td colspan="4">No app role assignments</td></tr>';
   }catch(e){document.getElementById('adSPGrid').innerHTML=`<div style="color:var(--danger);grid-column:span 2">❌ ${esc(e.message)}</div>`;}
 }
-async function loadAppAzureScopes(){
-  _adScopesData=[];
-  if(!_subs.length){document.getElementById('adScopesTbody').innerHTML='<tr class="erow"><td colspan="5">No subscriptions loaded — go to Cost page first</td></tr>';return;}
-  try{
-    const sp=await gGet(`/servicePrincipals?$filter=appId eq '${_adAppId}'&$select=id`);
-    const spId=sp.value?.[0]?.id;
-    if(!spId){document.getElementById('adScopesTbody').innerHTML='<tr class="erow"><td colspan="5">No service principal found — no Azure RBAC possible</td></tr>';document.getElementById('adScopeTotal').textContent=0;return;}
-    for(const sub of _subs){
-      try{
-        const d=await armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '${spId}'`);
-        const rd=await armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01`);
-        const rdMap={};(rd.value||[]).forEach(r=>{rdMap[r.id]=r.properties?.roleName||r.name;});
-        (d.value||[]).forEach(a=>{const scope=a.properties?.scope||'';const parts=scope.split('/');const st=scope===`/subscriptions/${sub.subscriptionId}`?'Subscription':parts.includes('resourceGroups')&&parts.length===5?'Resource Group':parts.length>5?'Resource':'Other';_adScopesData.push({role:rdMap[a.properties?.roleDefinitionId]||'—',scope:parts[parts.length-1]||scope,scopeFull:scope,scopeType:st,subName:sub.displayName});});
-      }catch(e){}
+// Cache role definitions per subscription to avoid re-fetching
+const _rdCache = {};
+
+async function getRoleDefMap(subId) {
+  if (_rdCache[subId]) return _rdCache[subId];
+  const rd = await armGet(`/subscriptions/${subId}/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01`);
+  const map = {};
+  (rd.value||[]).forEach(r => { map[r.id] = r.properties?.roleName || r.name; });
+  _rdCache[subId] = map;
+  return map;
+}
+
+function showProgress(id, label, pct) {
+  const wrap = document.getElementById(id + 'Progress');
+  const fill = document.getElementById(id + 'ProgressFill');
+  const lbl  = document.getElementById(id + 'ProgressLabel');
+  if (!wrap) return;
+  wrap.classList.add('show');
+  if (lbl) lbl.textContent = label;
+  if (fill) {
+    if (pct < 0) { fill.classList.add('indeterminate'); fill.style.width='40%'; }
+    else { fill.classList.remove('indeterminate'); fill.style.width = pct + '%'; }
+  }
+}
+function hideProgress(id) {
+  const wrap = document.getElementById(id + 'Progress');
+  if (wrap) wrap.classList.remove('show');
+}
+
+async function loadAppAzureScopes() {
+  _adScopesData = [];
+  if (!_subs.length) {
+    document.getElementById('adScopesTbody').innerHTML = '<tr class="erow"><td colspan="5">No subscriptions loaded — open Cost tab first</td></tr>';
+    return;
+  }
+  document.getElementById('adScopesTbody').innerHTML = '';
+  showProgress('scope', 'Finding service principal…', -1);
+  try {
+    // Step 1: Get service principal ID
+    const sp = await gGet(`/servicePrincipals?$filter=appId eq '${_adAppId}'&$select=id`);
+    const spId = sp.value?.[0]?.id;
+    if (!spId) {
+      hideProgress('scope');
+      document.getElementById('adScopesTbody').innerHTML = '<tr class="erow"><td colspan="5">No service principal found — app not consented in this tenant</td></tr>';
+      document.getElementById('adScopeTotal').textContent = 0;
+      return;
     }
-    document.getElementById('adScopeTotal').textContent=_adScopesData.length;
-    document.getElementById('adScopeOwner').textContent=_adScopesData.filter(r=>r.role==='Owner').length;
-    document.getElementById('adScopeContrib').textContent=_adScopesData.filter(r=>r.role==='Contributor').length;
-    document.getElementById('adScopeReader').textContent=_adScopesData.filter(r=>r.role==='Reader').length;
-    const rc=r=>r==='Owner'?'b-r':r==='Contributor'?'b-y':'b-b';const sc=s=>s==='Subscription'?'b-b':s==='Resource Group'?'b-g':s==='Resource'?'b-p':'b-gr';
-    document.getElementById('adScopesTbody').innerHTML=_adScopesData.length?_adScopesData.map(r=>`<tr><td><span class="b ${rc(r.role)}">${esc(r.role)}</span></td><td><strong>${esc(r.scope)}</strong></td><td><span class="b ${sc(r.scopeType)}">${esc(r.scopeType)}</span></td><td>${esc(r.subName)}</td><td class="mono" style="font-size:10px" title="${esc(r.scopeFull)}">${esc(r.scopeFull)}</td></tr>`).join(''):'<tr class="erow"><td colspan="5">No Azure RBAC assignments found</td></tr>';
-  }catch(e){document.getElementById('adScopesTbody').innerHTML=`<tr class="erow"><td colspan="5">❌ ${esc(e.message)}</td></tr>`;}
+
+    // Step 2: Fetch role assignments from ALL subscriptions tracking progress
+    showProgress('scope', `Checking ${_subs.length} subscription(s) in parallel…`, 10);
+    let done = 0;
+    const results = await Promise.allSettled(
+      _subs.map(async sub => {
+        const [raData, rdMap] = await Promise.all([
+          armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '${spId}'`),
+          getRoleDefMap(sub.subscriptionId)
+        ]);
+        done++;
+        showProgress('scope', `Checked ${done} / ${_subs.length} subscriptions…`, Math.round(10 + (done/_subs.length)*80));
+        return { sub, assignments: raData.value || [], rdMap };
+      })
+    );
+
+    // Step 3: Process results
+    results.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      const { sub, assignments, rdMap } = r.value;
+      assignments.forEach(a => {
+        const scope = a.properties?.scope || '';
+        const parts = scope.split('/');
+        const st = scope === `/subscriptions/${sub.subscriptionId}` ? 'Subscription'
+          : parts.includes('resourceGroups') && parts.length === 5 ? 'Resource Group'
+          : parts.length > 5 ? 'Resource' : 'Other';
+        _adScopesData.push({
+          role: rdMap[a.properties?.roleDefinitionId] || '—',
+          scope: parts[parts.length-1] || scope,
+          scopeFull: scope,
+          scopeType: st,
+          subName: sub.displayName
+        });
+      });
+    });
+
+    // Step 4: Render
+    document.getElementById('adScopeTotal').textContent = _adScopesData.length;
+    document.getElementById('adScopeOwner').textContent = _adScopesData.filter(r=>r.role==='Owner').length;
+    document.getElementById('adScopeContrib').textContent = _adScopesData.filter(r=>r.role==='Contributor').length;
+    document.getElementById('adScopeReader').textContent = _adScopesData.filter(r=>r.role==='Reader').length;
+    const rc = r => r==='Owner'?'b-r':r==='Contributor'?'b-y':'b-b';
+    const sc = s => s==='Subscription'?'b-b':s==='Resource Group'?'b-g':s==='Resource'?'b-p':'b-gr';
+    document.getElementById('adScopesTbody').innerHTML = _adScopesData.length
+      ? _adScopesData.map(r => `<tr>
+          <td><span class="b ${rc(r.role)}">${esc(r.role)}</span></td>
+          <td><strong>${esc(r.scope)}</strong></td>
+          <td><span class="b ${sc(r.scopeType)}">${esc(r.scopeType)}</span></td>
+          <td>${esc(r.subName)}</td>
+          <td class="mono" style="font-size:10px" title="${esc(r.scopeFull)}">${esc(r.scopeFull)}</td>
+        </tr>`).join('')
+      : '<tr class="erow"><td colspan="5">No Azure RBAC assignments found across all subscriptions</td></tr>';
+    showProgress('scope', `Done — ${_adScopesData.length} assignment(s) found`, 100);
+    setTimeout(() => hideProgress('scope'), 1200);
+  } catch(e) {
+    hideProgress('scope');
+    document.getElementById('adScopesTbody').innerHTML = `<tr class="erow"><td colspan="5">❌ ${esc(e.message)}</td></tr>`;
+  }
 }
 // ── ENVIRONMENT BREAKDOWN CHART ──
 const ENV_DEFS = [

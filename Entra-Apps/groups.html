@@ -101,6 +101,12 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
 .perm-item:hover{background:var(--card3)}
 .perm-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .perm-admin{color:var(--warn);font-size:10px;font-family:var(--mono)}
+.progress-wrap{margin:10px 0;display:none}.progress-wrap.show{display:block}
+.progress-bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease}
+.progress-bar-fill.indeterminate{width:40%;animation:indeterminate 1.4s ease-in-out infinite}
+@keyframes indeterminate{0%{margin-left:-40%}100%{margin-left:100%}}
+.progress-label{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:4px}
 @media(max-width:800px){.split{grid-template-columns:1fr}.main{padding:12px}}
 </style>
 </head>
@@ -190,6 +196,10 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
   <!-- SCOPES FOR THIS GROUP -->
   <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
     <div class="sec-title" style="margin-bottom:12px">Azure RBAC Scopes — This Group</div>
+    <div class="progress-wrap" id="groupScopeProgress">
+      <div class="progress-label" id="groupScopeProgressLabel">Checking subscriptions…</div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="groupScopeProgressFill"></div></div>
+    </div>
     <div class="stats" style="margin-bottom:10px">
       <div class="sc"><div class="sc-n" id="gsc0">0</div><div class="sc-l">Total Assignments</div></div>
       <div class="sc"><div class="sc-n" style="color:var(--danger)" id="gsc1">0</div><div class="sc-l">Owner</div></div>
@@ -410,21 +420,45 @@ async function loadMembers(id,name){
   loadGroupScopes(id);
 }
 
+function showProgress(id,label,pct){
+  const w=document.getElementById(id+'Progress'),f=document.getElementById(id+'ProgressFill'),l=document.getElementById(id+'ProgressLabel');
+  if(!w)return;w.classList.add('show');if(l)l.textContent=label;
+  if(f){if(pct<0){f.classList.add('indeterminate');f.style.width='40%';}else{f.classList.remove('indeterminate');f.style.width=pct+'%';}}
+}
+function hideProgress(id){const w=document.getElementById(id+'Progress');if(w)w.classList.remove('show');}
+
+const _rdCacheG = {};
+async function getRoleDefMapG(subId){
+  if(_rdCacheG[subId]) return _rdCacheG[subId];
+  const rd=await armGet(`/subscriptions/${subId}/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01`);
+  const map={};(rd.value||[]).forEach(r=>{map[r.id]=r.properties?.roleName||r.name;});
+  _rdCacheG[subId]=map;return map;
+}
 async function loadGroupScopes(groupId){
   _groupScopes=[];
-  if(!_subs.length){document.getElementById('groupScopesTbody').innerHTML='<tr class="erow"><td colspan="5">No subscriptions — refresh page after visiting Cost page</td></tr>';return;}
-  for(const sub of _subs){
-    try{
-      const d=await armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '${groupId}'`);
-      const rd=await armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01`);
-      const rdMap={};(rd.value||[]).forEach(r=>{rdMap[r.id]=r.properties?.roleName||r.name;});
-      (d.value||[]).forEach(a=>{const scope=a.properties?.scope||'';const parts=scope.split('/');const st=scope===`/subscriptions/${sub.subscriptionId}`?'Subscription':parts.includes('resourceGroups')&&parts.length===5?'Resource Group':parts.length>5?'Resource':'Other';_groupScopes.push({role:rdMap[a.properties?.roleDefinitionId]||'—',scope:parts[parts.length-1]||scope,scopeFull:scope,scopeType:st,subName:sub.displayName});});
-    }catch(e){}
-  }
+  if(!_subs.length){document.getElementById('groupScopesTbody').innerHTML='<tr class="erow"><td colspan="5">No subscriptions loaded</td></tr>';return;}
+  document.getElementById('groupScopesTbody').innerHTML='';
+  showProgress('groupScope','Checking '+_subs.length+' subscription(s)…',-1);
+  let _gsDone=0;
+  const results=await Promise.allSettled(_subs.map(async sub=>{
+    const [raData,rdMap]=await Promise.all([
+      armGet(`/subscriptions/${sub.subscriptionId}/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '${groupId}'`),
+      getRoleDefMapG(sub.subscriptionId)
+    ]);
+    _gsDone++;showProgress('groupScope','Checked '+_gsDone+' / '+_subs.length+' subscriptions…',Math.round(10+(_gsDone/_subs.length)*80));
+    return{sub,assignments:raData.value||[],rdMap};
+  }));
+  results.forEach(r=>{
+    if(r.status!=='fulfilled')return;
+    const{sub,assignments,rdMap}=r.value;
+    assignments.forEach(a=>{const scope=a.properties?.scope||'';const parts=scope.split('/');const st=scope===`/subscriptions/${sub.subscriptionId}`?'Subscription':parts.includes('resourceGroups')&&parts.length===5?'Resource Group':parts.length>5?'Resource':'Other';_groupScopes.push({role:rdMap[a.properties?.roleDefinitionId]||'—',scope:parts[parts.length-1]||scope,scopeFull:scope,scopeType:st,subName:sub.displayName});});
+  });
   document.getElementById('gsc0').textContent=_groupScopes.length;
   document.getElementById('gsc1').textContent=_groupScopes.filter(r=>r.role==='Owner').length;
   document.getElementById('gsc2').textContent=_groupScopes.filter(r=>r.role==='Contributor').length;
   document.getElementById('gsc3').textContent=_groupScopes.filter(r=>r.role==='Reader').length;
+  showProgress('groupScope','Done — '+_groupScopes.length+' assignment(s) found',100);
+  setTimeout(()=>hideProgress('groupScope'),1200);
   const rc=r=>r==='Owner'?'b-r':r==='Contributor'?'b-y':'b-b';const sc=s=>s==='Subscription'?'b-b':s==='Resource Group'?'b-g':s==='Resource'?'b-p':'b-gr';
   document.getElementById('groupScopesTbody').innerHTML=_groupScopes.length?_groupScopes.map(r=>`<tr><td><span class="b ${rc(r.role)}">${esc(r.role)}</span></td><td><strong>${esc(r.scope)}</strong></td><td><span class="b ${sc(r.scopeType)}">${esc(r.scopeType)}</span></td><td>${esc(r.subName)}</td><td class="mono" style="font-size:10px" title="${esc(r.scopeFull)}">${esc(r.scopeFull)}</td></tr>`).join(''):'<tr class="erow"><td colspan="5">No Azure RBAC assignments found across '+_subs.length+' subscription(s)</td></tr>';
 }
