@@ -7,41 +7,56 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh}
+.card{background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px 24px;text-decoration:none;color:#1a3a5c;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 8px 24px rgba(0,0,0,.12);transform:translateY(-2px)}
+.card-icon{font-size:36px}
+.card-title{font-size:16px;font-weight:700;color:#1a3a5c}
+.card-hint{font-size:12px;color:#888}
 </style>
 </head>
 <body>
+
+<!-- NAV -->
 <div style="background:#fff;border-bottom:1px solid #dde3ea;padding:10px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-  <span style="font-size:13px;font-weight:700;color:#1a3a5c;margin-right:4px">⚡ Azure Governance</span>
-  <a href="gov-cost.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">💰 Cost Management</a> <a href="gov-security.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🔒 Security & Compliance</a> <a href="gov-architecture.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🏗 Architecture</a> <a href="gov-shared.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🔧 Shared Services</a> 
+  <a href="../index.html" style="font-size:13px;font-weight:700;color:#1a3a5c;text-decoration:none;margin-right:8px">⚡ Azure Governance</a>
+  <a href="gov-cost.html"         style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff">💰 Cost Management</a>
+  <a href="gov-security.html"     style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff">🔒 Security & Compliance</a>
+  <a href="gov-architecture.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff">🏗 Architecture</a>
+  <a href="gov-shared.html"       style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff">🔧 Shared Services</a>
+  <a href="../index.html"         style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#555;border:1px solid #d0d4db;background:#f8f9fa;margin-left:auto">← Main Portal</a>
 </div>
+
+<!-- HERO -->
 <div style="background:linear-gradient(135deg,#1a3a5c 0%,#2d6a9f 100%);color:#fff;padding:48px 40px;text-align:center">
   <div style="font-size:36px;font-weight:700;margin-bottom:10px">⚡ Azure Governance Portal</div>
   <div style="font-size:15px;opacity:.75">Select a section to explore policies, Bicep solutions and architecture guidance</div>
 </div>
+
+<!-- CARDS -->
 <div style="padding:40px;background:#f0f2f5;min-height:calc(100vh - 180px)">
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:960px;margin:0 auto">
-    
-  <a href="gov-cost.html" style="background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px 24px;text-decoration:none;color:#1a3a5c;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.06)'">
-    <div style="font-size:36px">💰</div>
-    <div style="font-size:16px;font-weight:700;color:#1a3a5c">Cost Management</div>
-    <div style="font-size:12px;color:#888">Click to open →</div>
-  </a>
-  <a href="gov-security.html" style="background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px 24px;text-decoration:none;color:#1a3a5c;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.06)'">
-    <div style="font-size:36px">🔒</div>
-    <div style="font-size:16px;font-weight:700;color:#1a3a5c">Security & Compliance</div>
-    <div style="font-size:12px;color:#888">Click to open →</div>
-  </a>
-  <a href="gov-architecture.html" style="background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px 24px;text-decoration:none;color:#1a3a5c;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.06)'">
-    <div style="font-size:36px">🏗</div>
-    <div style="font-size:16px;font-weight:700;color:#1a3a5c">Architecture</div>
-    <div style="font-size:12px;color:#888">Click to open →</div>
-  </a>
-  <a href="gov-shared.html" style="background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px 24px;text-decoration:none;color:#1a3a5c;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.06)'">
-    <div style="font-size:36px">🔧</div>
-    <div style="font-size:16px;font-weight:700;color:#1a3a5c">Shared Services</div>
-    <div style="font-size:12px;color:#888">Click to open →</div>
-  </a>
+    <a href="gov-cost.html" class="card">
+      <div class="card-icon">💰</div>
+      <div class="card-title">Cost Management</div>
+      <div class="card-hint">Budgets, tagging, lifecycle policies</div>
+    </a>
+    <a href="gov-security.html" class="card">
+      <div class="card-icon">🔒</div>
+      <div class="card-title">Security & Compliance</div>
+      <div class="card-hint">Network, identity, encryption policies</div>
+    </a>
+    <a href="gov-architecture.html" class="card">
+      <div class="card-icon">🏗</div>
+      <div class="card-title">Architecture</div>
+      <div class="card-hint">Standards, naming, environments</div>
+    </a>
+    <a href="gov-shared.html" class="card">
+      <div class="card-icon">🔧</div>
+      <div class="card-title">Shared Services</div>
+      <div class="card-hint">Hub VNet, Firewall, Log Analytics</div>
+    </a>
   </div>
 </div>
+
 </body>
 </html>
