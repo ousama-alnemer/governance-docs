@@ -147,6 +147,7 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
   <button class="tnav" onclick="goTab('secrets',this)">🔐 Secret Expiry</button>
   <button class="tnav" onclick="goTab('audit',this)">📋 Sign-In Audit</button>
   <button class="tnav" onclick="goTab('cost',this)">💰 Cost Management</button>
+  <button class="tnav" onclick="goTab('rbac',this)">🔐 RBAC Assignments</button>
 </div>
 <div class="main">
 
@@ -451,6 +452,109 @@ tbody tr:hover{background:rgba(56,139,253,.04)}
     <tbody id="drillTbody"></tbody></table></div>
   </div>
   <div class="logbox" id="logCost"><span class="ll info">[ready] Cost Management — requires Cost Management Reader role</span></div>
+</div>
+
+<!-- TAB: RBAC -->
+<div class="tab-panel" id="tab-rbac">
+  <div class="sec-hdr">
+    <div class="sec-title">RBAC Role Assignments</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="loadRBAC()">↻ Load</button>
+      <button class="btn btn-o" onclick="exportRBAC()">⬇ CSV</button>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <div class="cg"><span class="clabel">View</span>
+      <select id="rbacView" onchange="renderRBAC()">
+        <option value="all">All Assignments</option>
+        <option value="groups">Security Groups Only</option>
+        <option value="apps">Service Principals / Apps Only</option>
+        <option value="users">Users Only</option>
+      </select>
+    </div>
+    <div class="cg"><span class="clabel">Scope</span>
+      <select id="rbacSub" style="width:280px">
+        <option value="">— Select subscription —</option>
+      </select>
+    </div>
+    <div class="cg"><span class="clabel">Role</span>
+      <select id="rbacRoleFilter" onchange="renderRBAC()">
+        <option value="">All Roles</option>
+        <option value="Owner">Owner</option>
+        <option value="Contributor">Contributor</option>
+        <option value="Reader">Reader</option>
+        <option value="User Access Administrator">User Access Administrator</option>
+      </select>
+    </div>
+    <div class="cg"><span class="clabel">Search</span>
+      <input id="rbacSearch" placeholder="Name or principal…" style="width:200px" oninput="renderRBAC()"/>
+    </div>
+  </div>
+
+  <div class="stats" id="rbacStats" style="display:none">
+    <div class="sc"><div class="sc-n" id="rb0">0</div><div class="sc-l">Total Assignments</div></div>
+    <div class="sc"><div class="sc-n" style="color:var(--accent2)" id="rb1">0</div><div class="sc-l">Groups</div></div>
+    <div class="sc"><div class="sc-n" style="color:var(--accent)" id="rb2">0</div><div class="sc-l">Service Principals</div></div>
+    <div class="sc"><div class="sc-n" style="color:var(--warn)" id="rb3">0</div><div class="sc-l">Users</div></div>
+    <div class="sc"><div class="sc-n" style="color:var(--danger)" id="rb4">0</div><div class="sc-l">Owner Assignments</div></div>
+  </div>
+
+  <!-- APP RBAC SECTION -->
+  <div style="margin-bottom:20px">
+    <div class="sec-title" style="margin-bottom:12px">Azure RBAC — Subscription / Resource Group Level</div>
+    <div class="tbl-wrap sc2">
+      <table><thead><tr>
+        <th>Principal Name</th><th>Principal Type</th><th>Role</th><th>Scope</th><th>Scope Type</th><th>Assignment ID</th>
+      </tr></thead>
+      <tbody id="rbacTbody"><tr class="lrow"><td colspan="6">Select a subscription and click Load</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ENTRA ROLE ASSIGNMENTS (Directory Roles) -->
+  <div style="margin-bottom:20px">
+    <div class="sec-hdr">
+      <div class="sec-title">Entra ID Directory Roles — Groups</div>
+      <button class="btn btn-p" style="font-size:12px" onclick="loadGroupEntraRoles()">↻ Load Group Entra Roles</button>
+    </div>
+    <div class="tbl-wrap sc2">
+      <table><thead><tr>
+        <th>Group Name</th><th>Directory Role</th><th>Role Template ID</th><th>Assignment Type</th>
+      </tr></thead>
+      <tbody id="groupRolesTbody"><tr class="lrow"><td colspan="4">Click Load Group Entra Roles</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- APP REGISTRATION PERMISSIONS -->
+  <div>
+    <div class="sec-hdr">
+      <div class="sec-title">App Registration — API Permissions</div>
+      <button class="btn btn-p" style="font-size:12px" onclick="loadAppPermissions()">↻ Load App Permissions</button>
+    </div>
+    <div class="ctrls">
+      <div class="cg"><span class="clabel">Search App</span>
+        <input id="appPermSearch" placeholder="App name…" style="width:220px" oninput="renderAppPerms()"/>
+      </div>
+      <div class="cg"><span class="clabel">Permission Type</span>
+        <select id="appPermType" onchange="renderAppPerms()">
+          <option value="">All</option>
+          <option value="Role">Application (App Role)</option>
+          <option value="Scope">Delegated (Scope)</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap sc2">
+      <table><thead><tr>
+        <th>App Name</th><th>Client ID</th><th>API</th><th>Permission</th><th>Type</th><th>Admin Consent</th>
+      </tr></thead>
+      <tbody id="appPermTbody"><tr class="lrow"><td colspan="6">Click Load App Permissions</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="logbox" id="logRBAC"><span class="ll info">[ready] RBAC viewer — Azure role assignments + Entra directory roles</span></div>
 </div>
 
 </div></div><!-- /main /app -->
@@ -764,7 +868,11 @@ function renderApps(){
     const hasE=creds.some(c=>c.endDateTime&&new Date(c.endDateTime)<=now2);
     const hasSn=creds.some(c=>c.endDateTime&&new Date(c.endDateTime)>now2&&(new Date(c.endDateTime)-now2)/864e5<90);
     const badge=creds.length===0?'<span class="b b-gr">No secrets</span>':hasE?'<span class="b b-r">Has expired</span>':hasSn?'<span class="b b-y">Expiring soon</span>':hasA?'<span class="b b-g">Active</span>':'<span class="b b-gr">—</span>';
-    return`<tr><td><strong>${esc(a.displayName||'—')}</strong></td><td class="mono">${esc(a.appId||'')}</td><td>${fD(a.createdDateTime)}</td><td><span class="b b-b">${creds.length} secret${creds.length!==1?'s':''}</span></td><td>${badge}</td><td style="display:flex;gap:5px"><button class="btn btn-o" style="font-size:11px;padding:3px 8px" onclick="viewSecrets('${esc(a.id)}','${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔑</button><button class="btn btn-d" style="font-size:11px;padding:3px 8px" onclick="delApp('${esc(a.id)}','${esc(a.displayName||'')}')">🗑</button></td></tr>`;
+    return`<tr><td><strong>${esc(a.displayName||'—')}</strong></td><td class="mono">${esc(a.appId||'')}</td><td>${fD(a.createdDateTime)}</td><td><span class="b b-b">${creds.length} secret${creds.length!==1?'s':''}</span></td><td>${badge}</td><td style="display:flex;gap:5px;flex-wrap:wrap">
+      <button class="btn btn-p" style="font-size:11px;padding:3px 8px" onclick="openAppDetails('${esc(a.id)}','${esc(a.appId||'')}','${esc(a.displayName||'')}')">📋 Details</button>
+      <button class="btn btn-o" style="font-size:11px;padding:3px 8px" onclick="viewSecrets('${esc(a.id)}','${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔑</button>
+      <button class="btn btn-d" style="font-size:11px;padding:3px 8px" onclick="delApp('${esc(a.id)}','${esc(a.displayName||'')}')">🗑</button>
+    </td></tr>`;
   }).join('');
 }
 function buildPermGrid(filter){const g=document.getElementById('permGrid');if(!g)return;const f=filter.toLowerCase();g.innerHTML=GRAPH_PERMS.filter(p=>!f||p.n.toLowerCase().includes(f)).map(p=>`<label class="perm-item"><input type="checkbox" value="${p.n}" ${_checkedPerms.has(p.n)?'checked':''} onchange="if(this.checked)_checkedPerms.add('${p.n}');else _checkedPerms.delete('${p.n}')"/><span>${p.n}</span>${p.a?'<span class="perm-admin">admin</span>':''}</label>`).join('');}
@@ -838,7 +946,9 @@ function renderSG(){
     const mb=isDyn?'<span class="b b-p">Dynamic</span>':'<span class="b b-gr">Assigned</span>';
     const rb=g.isAssignableToRole?'<span class="b b-y">Yes</span>':'<span class="b b-gr">No</span>';
     const sb=g.onPremisesSyncEnabled?'<span class="b b-gr">On-Prem</span>':'';
-    return`<tr><td><strong>${esc(g.displayName||'')}</strong>${sb?' '+sb:''}<div style="font-size:11px;color:var(--muted)">${esc(g.description||'')}</div></td><td>${tb}</td><td>${mb}</td><td>${rb}</td><td>${g.onPremisesSyncEnabled?'<span class="b b-y">Synced</span>':'<span class="b b-gr">Cloud</span>'}</td><td>${fD(g.createdDateTime)}</td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-o" style="font-size:11px;padding:2px 8px" onclick="loadMembers('${esc(g.id)}','${esc(g.displayName||'')}')">👥</button><button class="btn btn-o" style="font-size:11px;padding:2px 8px" onclick="openEdit('${esc(g.id)}','${esc(g.displayName||'')}','${esc(g.description||'')}','${esc(g.membershipRule||'')}')">✏</button><button class="btn btn-d" style="font-size:11px;padding:2px 8px" onclick="delSG('${esc(g.id)}','${esc(g.displayName||'')}')">🗑</button></td></tr>`;
+    return`<tr><td><strong>${esc(g.displayName||'')}</strong>${sb?' '+sb:''}<div style="font-size:11px;color:var(--muted)">${esc(g.description||'')}</div></td><td>${tb}</td><td>${mb}</td><td>${rb}</td><td>${g.onPremisesSyncEnabled?'<span class="b b-y">Synced</span>':'<span class="b b-gr">Cloud</span>'}</td><td>${fD(g.createdDateTime)}</td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-o" style="font-size:11px;padding:2px 8px" onclick="loadMembers('${esc(g.id)}','${esc(g.displayName||'')}')">👥</button><button class="btn btn-o" style="font-size:11px;padding:2px 8px" onclick="openEdit('${esc(g.id)}','${esc(g.displayName||'')}','${esc(g.description||'')}','${esc(g.membershipRule||'')}')">✏</button>
+        <button class="btn btn-o" style="font-size:11px;padding:2px 8px;color:var(--warn)" onclick="viewGroupScopes('${esc(g.id)}','${esc(g.displayName||'')}')">🔐 Scopes</button>
+        <button class="btn btn-d" style="font-size:11px;padding:2px 8px" onclick="delSG('${esc(g.id)}','${esc(g.displayName||'')}')">🗑</button></td></tr>`;
   }).join('');
 }
 async function loadMembers(id,name){
@@ -1002,5 +1112,781 @@ async function drillRG(rgName,subId,from,to,cur){
   }catch(e){tbody.innerHTML=`<tr class="erow"><td colspan="4">❌ ${esc(e.message)}</td></tr>`;}
 }
 function exportCost(){const rows=[['Name','Cost',document.getElementById('costCur').value]];_costData.forEach(r=>rows.push([r.name,r.cost,'']));dlCsv('cost.csv',rows);}
+
+// ── RBAC ──
+let _rbacData = [], _appPermsData = [], _groupRolesData = [];
+
+async function loadRBAC() {
+  const subId = document.getElementById('rbacSub').value;
+  if (!subId) {
+    // populate sub selector from _subs
+    if (!_subs.length) { notify('info','Loading subscriptions first…'); await loadSubs(); }
+    const sel = document.getElementById('rbacSub');
+    if (!sel.options.length || sel.options[0].value === '') {
+      sel.innerHTML = '<option value="">— Select subscription —</option>';
+      _subs.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.subscriptionId;
+        o.textContent = s.displayName + ' (' + s.subscriptionId.substring(0,8) + '…)';
+        sel.appendChild(o);
+      });
+      if (_subs.length) sel.value = _subs[0].subscriptionId;
+    }
+    if (!document.getElementById('rbacSub').value) { notify('err','Select a subscription'); return; }
+  }
+  const sid = document.getElementById('rbacSub').value;
+  document.getElementById('rbacTbody').innerHTML = '<tr class="lrow"><td colspan="6"><span class="spin"></span>Loading RBAC assignments…</td></tr>';
+  log('logRBAC','info','Loading RBAC for subscription: ' + sid);
+  try {
+    // Get all role assignments
+    const d = await arm('/subscriptions/' + sid + '/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=atScope()');
+    // Get role definitions to resolve names
+    const rdData = await arm('/subscriptions/' + sid + '/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01');
+    const rdMap = {};
+    (rdData.value || []).forEach(r => { rdMap[r.id] = r.properties?.roleName || r.name; });
+
+    // Get principal names from Graph for groups/users/SPs
+    const assignments = d.value || [];
+    const principalIds = [...new Set(assignments.map(a => a.properties?.principalId).filter(Boolean))];
+
+    // Batch resolve principals
+    const principalMap = {};
+    for (let i = 0; i < principalIds.length; i += 15) {
+      const batch = principalIds.slice(i, i+15);
+      try {
+        const filter = batch.map(id => `id eq '${id}'`).join(' or ');
+        const users = await gGet('/directoryObjects?$filter=' + encodeURIComponent(filter) + '&$select=id,displayName,userPrincipalName,@odata.type');
+        (users.value || []).forEach(u => { principalMap[u.id] = u; });
+      } catch(e) {}
+    }
+
+    _rbacData = assignments.map(a => {
+      const p = principalMap[a.properties?.principalId] || {};
+      const oType = (p['@odata.type'] || '').toLowerCase();
+      const pType = oType.includes('group') ? 'Group'
+        : oType.includes('serviceprincipal') ? 'ServicePrincipal'
+        : oType.includes('user') ? 'User'
+        : a.properties?.principalType || 'Unknown';
+      const scope = a.properties?.scope || '';
+      const scopeParts = scope.split('/');
+      const scopeType = scope === '/subscriptions/' + sid ? 'Subscription'
+        : scopeParts.includes('resourceGroups') && scopeParts.length === 5 ? 'Resource Group'
+        : scopeParts.length > 5 ? 'Resource'
+        : 'Management Group';
+      const scopeName = scopeParts[scopeParts.length - 1] || scope;
+      return {
+        principalName: p.displayName || p.userPrincipalName || a.properties?.principalId || '—',
+        principalType: pType,
+        role: rdMap[a.properties?.roleDefinitionId] || a.properties?.roleDefinitionId?.split('/').pop() || '—',
+        scope: scopeName,
+        scopeFull: scope,
+        scopeType,
+        id: a.id || '',
+        principalId: a.properties?.principalId || ''
+      };
+    });
+
+    log('logRBAC','ok', _rbacData.length + ' role assignments loaded');
+    updateRBACStats();
+    renderRBAC();
+  } catch(e) {
+    document.getElementById('rbacTbody').innerHTML = '<tr class="erow"><td colspan="6">❌ ' + esc(e.message) + '</td></tr>';
+    log('logRBAC','err', e.message);
+  }
+}
+
+function updateRBACStats() {
+  document.getElementById('rbacStats').style.display = 'flex';
+  document.getElementById('rb0').textContent = _rbacData.length;
+  document.getElementById('rb1').textContent = _rbacData.filter(r=>r.principalType==='Group').length;
+  document.getElementById('rb2').textContent = _rbacData.filter(r=>r.principalType==='ServicePrincipal').length;
+  document.getElementById('rb3').textContent = _rbacData.filter(r=>r.principalType==='User').length;
+  document.getElementById('rb4').textContent = _rbacData.filter(r=>r.role==='Owner').length;
+}
+
+function renderRBAC() {
+  const view = document.getElementById('rbacView').value;
+  const role = document.getElementById('rbacRoleFilter').value;
+  const q = (document.getElementById('rbacSearch').value || '').toLowerCase();
+  let f = _rbacData.filter(r => {
+    if (view === 'groups' && r.principalType !== 'Group') return false;
+    if (view === 'apps' && r.principalType !== 'ServicePrincipal') return false;
+    if (view === 'users' && r.principalType !== 'User') return false;
+    if (role && r.role !== role) return false;
+    if (q && !r.principalName.toLowerCase().includes(q) && !r.role.toLowerCase().includes(q) && !r.scope.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const tbody = document.getElementById('rbacTbody');
+  if (!f.length) { tbody.innerHTML = '<tr class="erow"><td colspan="6">No assignments match</td></tr>'; return; }
+  const roleColor = r => r==='Owner'?'b-r':r==='Contributor'?'b-y':r==='User Access Administrator'?'b-p':'b-b';
+  const typeColor = t => t==='Group'?'b-g':t==='ServicePrincipal'?'b-b':t==='User'?'b-gr':'b-gr';
+  const scopeColor = s => s==='Subscription'?'b-b':s==='Resource Group'?'b-g':'b-gr';
+  tbody.innerHTML = f.map(r => `<tr>
+    <td><strong>${esc(r.principalName)}</strong></td>
+    <td><span class="b ${typeColor(r.principalType)}">${esc(r.principalType)}</span></td>
+    <td><span class="b ${roleColor(r.role)}">${esc(r.role)}</span></td>
+    <td title="${esc(r.scopeFull)}">${esc(r.scope)}</td>
+    <td><span class="b ${scopeColor(r.scopeType)}">${esc(r.scopeType)}</span></td>
+    <td class="mono" style="font-size:10px">${esc(r.id.split('/').pop() || '')}</td>
+  </tr>`).join('');
+}
+
+async function loadGroupEntraRoles() {
+  document.getElementById('groupRolesTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span>Loading…</td></tr>';
+  log('logRBAC','info','Loading Entra directory roles for groups…');
+  try {
+    // Get all directory roles
+    const rolesData = await gGet('/directoryRoles?$select=id,displayName,roleTemplateId');
+    const roles = rolesData.value || [];
+    _groupRolesData = [];
+    for (const role of roles) {
+      try {
+        const members = await gGet('/directoryRoles/' + role.id + '/members?$select=id,displayName,@odata.type');
+        (members.value || []).forEach(m => {
+          if ((m['@odata.type'] || '').toLowerCase().includes('group')) {
+            _groupRolesData.push({
+              groupName: m.displayName || m.id,
+              roleName: role.displayName,
+              roleTemplateId: role.roleTemplateId,
+              assignmentType: 'Direct'
+            });
+          }
+        });
+      } catch(e) {}
+    }
+    log('logRBAC','ok', _groupRolesData.length + ' group role assignments found');
+    const tbody = document.getElementById('groupRolesTbody');
+    tbody.innerHTML = _groupRolesData.length ? _groupRolesData.map(r => `<tr>
+      <td><strong>${esc(r.groupName)}</strong></td>
+      <td><span class="b b-p">${esc(r.roleName)}</span></td>
+      <td class="mono">${esc(r.roleTemplateId)}</td>
+      <td><span class="b b-b">${esc(r.assignmentType)}</span></td>
+    </tr>`).join('') : '<tr class="erow"><td colspan="4">No groups assigned to directory roles</td></tr>';
+  } catch(e) {
+    document.getElementById('groupRolesTbody').innerHTML = '<tr class="erow"><td colspan="4">❌ ' + esc(e.message) + '</td></tr>';
+    log('logRBAC','err', e.message);
+  }
+}
+
+async function loadAppPermissions() {
+  document.getElementById('appPermTbody').innerHTML = '<tr class="lrow"><td colspan="6"><span class="spin"></span>Loading app permissions…</td></tr>';
+  log('logRBAC','info','Loading app API permissions…');
+  try {
+    const apps = await gAll('/applications?$top=999&$select=displayName,appId,requiredResourceAccess');
+    // Get Graph service principal to resolve permission names
+    const graphSP = await gGet("/servicePrincipals?$filter=appId eq '00000003-0000-0000-c000-000000000000'&$select=id,appRoles,oauth2PermissionScopes");
+    const graphSPData = graphSP.value?.[0] || {};
+    const appRoleMap = {};
+    const scopeMap = {};
+    (graphSPData.appRoles || []).forEach(r => { appRoleMap[r.id] = r.value || r.displayName; });
+    (graphSPData.oauth2PermissionScopes || []).forEach(s => { scopeMap[s.id] = s.value || s.adminConsentDisplayName; });
+    _appPermsData = [];
+    apps.forEach(a => {
+      (a.requiredResourceAccess || []).forEach(res => {
+        const apiName = res.resourceAppId === '00000003-0000-0000-c000-000000000000' ? 'Microsoft Graph'
+          : res.resourceAppId === '00000007-0000-0000-c000-000000000000' ? 'Dynamics CRM'
+          : res.resourceAppId;
+        (res.resourceAccess || []).forEach(perm => {
+          const permName = perm.type === 'Role' ? (appRoleMap[perm.id] || perm.id)
+            : (scopeMap[perm.id] || perm.id);
+          _appPermsData.push({
+            appName: a.displayName,
+            appId: a.appId,
+            api: apiName,
+            permission: permName,
+            type: perm.type === 'Role' ? 'Application' : 'Delegated',
+            adminConsent: perm.type === 'Role' ? 'Required' : 'Optional'
+          });
+        });
+      });
+    });
+    log('logRBAC','ok', _appPermsData.length + ' permission entries loaded');
+    renderAppPerms();
+  } catch(e) {
+    document.getElementById('appPermTbody').innerHTML = '<tr class="erow"><td colspan="6">❌ ' + esc(e.message) + '</td></tr>';
+    log('logRBAC','err', e.message);
+  }
+}
+
+function renderAppPerms() {
+  const q = (document.getElementById('appPermSearch').value || '').toLowerCase();
+  const type = document.getElementById('appPermType').value;
+  let f = _appPermsData.filter(p => {
+    if (q && !p.appName.toLowerCase().includes(q) && !p.permission.toLowerCase().includes(q)) return false;
+    if (type && p.type !== (type === 'Role' ? 'Application' : 'Delegated')) return false;
+    return true;
+  });
+  const tbody = document.getElementById('appPermTbody');
+  if (!f.length) { tbody.innerHTML = '<tr class="erow"><td colspan="6">No permissions match</td></tr>'; return; }
+  tbody.innerHTML = f.map(p => `<tr>
+    <td><strong>${esc(p.appName)}</strong></td>
+    <td class="mono">${esc(p.appId)}</td>
+    <td><span class="b b-b">${esc(p.api)}</span></td>
+    <td><strong>${esc(p.permission)}</strong></td>
+    <td><span class="b ${p.type==='Application'?'b-r':'b-g'}">${esc(p.type)}</span></td>
+    <td><span class="b ${p.adminConsent==='Required'?'b-y':'b-gr'}">${esc(p.adminConsent)}</span></td>
+  </tr>`).join('');
+}
+
+function exportRBAC() {
+  const rows = [['Principal Name','Type','Role','Scope','Scope Type']];
+  _rbacData.forEach(r => rows.push([r.principalName, r.principalType, r.role, r.scope, r.scopeType]));
+  dlCsv('rbac-assignments.csv', rows);
+}
+
+// Populate RBAC sub selector when subs are loaded
+const _origLoadSubs = loadSubs;
+async function loadSubs() {
+  await _origLoadSubs();
+  // Mirror subs to RBAC selector
+  const rbacSel = document.getElementById('rbacSub');
+  if (rbacSel && _subs.length) {
+    rbacSel.innerHTML = '<option value="">— Select subscription —</option>';
+    _subs.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.subscriptionId;
+      o.textContent = s.displayName + ' (' + s.subscriptionId.substring(0,8) + '…)';
+      rbacSel.appendChild(o);
+    });
+  }
+}
+</script>
+
+<!-- SCOPE MODAL -->
+<div class="overlay" id="mScopes">
+  <div class="modal" style="width:700px;max-width:96vw">
+    <h3 id="mScopesTitle">🔐 Azure RBAC Scopes</h3>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap" id="mScopesSubBtns"></div>
+    <div class="stats" id="mScopesStats" style="display:none;margin-bottom:14px">
+      <div class="sc"><div class="sc-n" id="mss0">0</div><div class="sc-l">Total Assignments</div></div>
+      <div class="sc"><div class="sc-n" style="color:var(--danger)" id="mss1">0</div><div class="sc-l">Owner</div></div>
+      <div class="sc"><div class="sc-n" style="color:var(--warn)" id="mss2">0</div><div class="sc-l">Contributor</div></div>
+      <div class="sc"><div class="sc-n" style="color:var(--accent)" id="mss3">0</div><div class="sc-l">Reader</div></div>
+    </div>
+    <div class="tbl-wrap sc2" style="max-height:420px">
+      <table><thead><tr>
+        <th>Role</th><th>Scope</th><th>Scope Type</th><th>Subscription</th>
+      </tr></thead>
+      <tbody id="mScopesTbody"><tr class="lrow"><td colspan="4"><span class="spin"></span>Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+      ℹ Showing Azure RBAC role assignments across all accessible subscriptions
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-o" onclick="exportScopeData()">⬇ Export CSV</button>
+      <button class="btn btn-o" onclick="closeModal('mScopes')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _scopeData = [], _scopeEntityName = '';
+
+async function viewGroupScopes(groupId, groupName) {
+  _scopeEntityName = groupName;
+  document.getElementById('mScopesTitle').textContent = '🔐 Azure Scopes — ' + groupName;
+  document.getElementById('mScopesTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span>Searching across subscriptions…</td></tr>';
+  document.getElementById('mScopesStats').style.display = 'none';
+  document.getElementById('mScopesSubBtns').innerHTML = '';
+  openModal('mScopes');
+  await loadScopesForPrincipal(groupId, 'group');
+}
+
+async function viewAppScopes(appId, appName) {
+  _scopeEntityName = appName;
+  document.getElementById('mScopesTitle').textContent = '🔐 Azure Scopes — ' + appName;
+  document.getElementById('mScopesTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span>Finding service principal…</td></tr>';
+  document.getElementById('mScopesStats').style.display = 'none';
+  document.getElementById('mScopesSubBtns').innerHTML = '';
+  openModal('mScopes');
+  try {
+    // Get service principal ID from appId
+    const sp = await gGet("/servicePrincipals?$filter=appId eq '" + appId + "'&$select=id,displayName");
+    const spObj = sp.value?.[0];
+    if (!spObj) {
+      document.getElementById('mScopesTbody').innerHTML = '<tr class="erow"><td colspan="4">No service principal found for this app. It may not be used in any subscription.</td></tr>';
+      return;
+    }
+    await loadScopesForPrincipal(spObj.id, 'sp');
+  } catch(e) {
+    document.getElementById('mScopesTbody').innerHTML = '<tr class="erow"><td colspan="4">❌ ' + esc(e.message) + '</td></tr>';
+  }
+}
+
+async function loadScopesForPrincipal(principalId, type) {
+  _scopeData = [];
+  if (!_subs.length) {
+    document.getElementById('mScopesTbody').innerHTML = '<tr class="erow"><td colspan="4">No subscriptions loaded. Go to Cost Management tab first.</td></tr>';
+    return;
+  }
+
+  // Show subscription filter buttons
+  const btnArea = document.getElementById('mScopesSubBtns');
+  btnArea.innerHTML = _subs.map(s =>
+    '<button class="btn btn-o" style="font-size:11px;padding:3px 10px" onclick="filterScopesBySub('' + s.subscriptionId + '')">' + esc(s.displayName) + '</button>'
+  ).join('') + '<button class="btn btn-p" style="font-size:11px;padding:3px 10px" onclick="renderScopeData()">All Subs</button>';
+
+  let found = 0;
+  for (const sub of _subs) {
+    try {
+      document.getElementById('mScopesTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span>Checking ' + esc(sub.displayName) + '…</td></tr>';
+      const d = await arm('/subscriptions/' + sub.subscriptionId +
+        '/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '' + principalId + ''');
+      
+      // Get role definitions
+      const rdData = await arm('/subscriptions/' + sub.subscriptionId + '/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01');
+      const rdMap = {};
+      (rdData.value || []).forEach(r => { rdMap[r.id] = r.properties?.roleName || r.name; });
+
+      (d.value || []).forEach(a => {
+        const scope = a.properties?.scope || '';
+        const scopeParts = scope.split('/');
+        const scopeType = scope === '/subscriptions/' + sub.subscriptionId ? 'Subscription'
+          : scopeParts.includes('resourceGroups') && scopeParts.length === 5 ? 'Resource Group'
+          : scopeParts.length > 5 ? 'Resource'
+          : scope.startsWith('/providers/Microsoft.Management') ? 'Management Group'
+          : 'Unknown';
+        const scopeName = scopeType === 'Subscription' ? sub.displayName
+          : scopeParts[scopeParts.length - 1] || scope;
+        _scopeData.push({
+          role: rdMap[a.properties?.roleDefinitionId] || a.properties?.roleDefinitionId?.split('/').pop() || '—',
+          scope: scopeName,
+          scopeFull: scope,
+          scopeType,
+          subName: sub.displayName,
+          subId: sub.subscriptionId
+        });
+        found++;
+      });
+    } catch(e) {
+      // Subscription may not be accessible - skip
+    }
+  }
+
+  if (!found) {
+    document.getElementById('mScopesTbody').innerHTML = '<tr class="erow"><td colspan="4">No Azure RBAC assignments found across ' + _subs.length + ' subscription(s). The ' + (type === 'group' ? 'group' : 'app service principal') + ' has no Azure role assignments.</td></tr>';
+    return;
+  }
+
+  renderScopeData();
+}
+
+function filterScopesBySub(subId) {
+  const f = _scopeData.filter(d => d.subId === subId);
+  renderScopeRows(f);
+}
+
+function renderScopeData() {
+  renderScopeRows(_scopeData);
+}
+
+function renderScopeRows(data) {
+  // Stats
+  document.getElementById('mScopesStats').style.display = 'flex';
+  document.getElementById('mss0').textContent = data.length;
+  document.getElementById('mss1').textContent = data.filter(r => r.role === 'Owner').length;
+  document.getElementById('mss2').textContent = data.filter(r => r.role === 'Contributor').length;
+  document.getElementById('mss3').textContent = data.filter(r => r.role === 'Reader').length;
+
+  const roleColor = r => r==='Owner'?'b-r':r==='Contributor'?'b-y':r==='User Access Administrator'?'b-p':'b-b';
+  const scopeColor = s => s==='Subscription'?'b-b':s==='Resource Group'?'b-g':s==='Resource'?'b-p':'b-gr';
+
+  document.getElementById('mScopesTbody').innerHTML = data.map(r => `<tr>
+    <td><span class="b ${roleColor(r.role)}">${esc(r.role)}</span></td>
+    <td title="${esc(r.scopeFull)}"><strong>${esc(r.scope)}</strong></td>
+    <td><span class="b ${scopeColor(r.scopeType)}">${esc(r.scopeType)}</span></td>
+    <td>${esc(r.subName)}</td>
+  </tr>`).join('');
+}
+
+function exportScopeData() {
+  const rows = [['Entity', 'Role', 'Scope', 'Scope Type', 'Subscription']];
+  _scopeData.forEach(r => rows.push([_scopeEntityName, r.role, r.scope, r.scopeType, r.subName]));
+  dlCsv('scopes-' + _scopeEntityName.replace(/[^a-z0-9]/gi,'-') + '.csv', rows);
+}
+</script>
+
+<!-- APP DETAILS MODAL -->
+<div class="overlay" id="mAppDetails">
+  <div class="modal" style="width:860px;max-width:98vw;max-height:92vh">
+    <h3 id="mAppDetailsTitle">📋 App Details</h3>
+
+    <!-- TAB NAV -->
+    <div style="display:flex;gap:2px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none">
+      <button class="ptab active" id="adtab-overview" onclick="adTab('overview',this)">Overview</button>
+      <button class="ptab" id="adtab-secrets" onclick="adTab('secrets',this)">🔑 Secrets</button>
+      <button class="ptab" id="adtab-perms" onclick="adTab('perms',this)">🛡 Permissions</button>
+      <button class="ptab" id="adtab-scopes" onclick="adTab('scopes',this)">🔐 Azure Scopes</button>
+      <button class="ptab" id="adtab-owners" onclick="adTab('owners',this)">👤 Owners</button>
+      <button class="ptab" id="adtab-uris" onclick="adTab('uris',this)">🌐 URIs & Settings</button>
+      <button class="ptab" id="adtab-sp" onclick="adTab('sp',this)">⚙ Service Principal</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="adpanel-overview" style="display:block">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="adOverviewGrid"></div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Tags</div>
+      <div id="adTagsArea" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;min-height:44px"></div>
+    </div>
+
+    <!-- SECRETS -->
+    <div id="adpanel-secrets" style="display:none">
+      <div class="tbl-wrap"><table><thead><tr><th>Secret Name</th><th>Key ID</th><th>Start</th><th>Expires</th><th>Days Left</th><th>Status</th></tr></thead>
+      <tbody id="adSecretsTbody"></tbody></table></div>
+    </div>
+
+    <!-- PERMISSIONS -->
+    <div id="adpanel-perms" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">API permissions configured on this app registration</div>
+      <div class="tbl-wrap"><table><thead><tr><th>API</th><th>Permission</th><th>Type</th><th>Admin Consent</th></tr></thead>
+      <tbody id="adPermsTbody"></tbody></table></div>
+    </div>
+
+    <!-- AZURE SCOPES -->
+    <div id="adpanel-scopes" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Azure RBAC role assignments for this app's service principal across all subscriptions</div>
+      <div class="stats" style="margin-bottom:12px">
+        <div class="sc"><div class="sc-n" id="adScopeTotal">0</div><div class="sc-l">Total</div></div>
+        <div class="sc"><div class="sc-n" style="color:var(--danger)" id="adScopeOwner">0</div><div class="sc-l">Owner</div></div>
+        <div class="sc"><div class="sc-n" style="color:var(--warn)" id="adScopeContrib">0</div><div class="sc-l">Contributor</div></div>
+        <div class="sc"><div class="sc-n" style="color:var(--accent)" id="adScopeReader">0</div><div class="sc-l">Reader</div></div>
+      </div>
+      <div class="tbl-wrap sc2" style="max-height:280px"><table><thead><tr><th>Role</th><th>Scope Name</th><th>Scope Type</th><th>Subscription</th><th>Full Path</th></tr></thead>
+      <tbody id="adScopesTbody"></tbody></table></div>
+    </div>
+
+    <!-- OWNERS -->
+    <div id="adpanel-owners" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Users who own this app registration</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Display Name</th><th>UPN</th><th>Object ID</th></tr></thead>
+      <tbody id="adOwnersTbody"></tbody></table></div>
+    </div>
+
+    <!-- URIs & SETTINGS -->
+    <div id="adpanel-uris" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Redirect URIs</div>
+          <div id="adRedirectUris" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:var(--mono);min-height:60px"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Logout URL / Homepage</div>
+          <div id="adLogoutUrl" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:var(--mono);min-height:60px"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">App Roles (exposed)</div>
+          <div id="adAppRoles" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;min-height:60px"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Token Configuration</div>
+          <div id="adTokenCfg" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;min-height:60px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVICE PRINCIPAL -->
+    <div id="adpanel-sp" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Enterprise Application / Service Principal details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="adSPGrid"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">App Role Assignments (who uses this app)</div>
+        <div class="tbl-wrap sc2" style="max-height:220px"><table><thead><tr><th>Principal</th><th>Principal Type</th><th>Role</th><th>Created</th></tr></thead>
+        <tbody id="adSPRolesTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="mfooter">
+      <button class="btn btn-o" onclick="exportAppDetails()">⬇ Export All</button>
+      <button class="btn btn-o" onclick="closeModal('mAppDetails')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── APP DETAILS ──
+let _adData = {}, _adSpData = {}, _adScopesData = [], _adOwnersData = [], _adPermsData = [];
+let _adObjId = '', _adAppId = '', _adName = '';
+let _graphSPData = null;
+
+function adTab(id, btn) {
+  document.querySelectorAll('[id^="adpanel-"]').forEach(p => p.style.display='none');
+  document.querySelectorAll('[id^="adtab-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('adpanel-'+id).style.display = 'block';
+  btn.classList.add('active');
+}
+
+async function openAppDetails(objId, appId, name) {
+  _adObjId = objId; _adAppId = appId; _adName = name;
+  _adData = {}; _adSpData = {}; _adScopesData = []; _adOwnersData = []; _adPermsData = [];
+  document.getElementById('mAppDetailsTitle').textContent = '📋 ' + name;
+  // Reset all tabs
+  document.querySelectorAll('[id^="adpanel-"]').forEach(p => p.style.display='none');
+  document.querySelectorAll('[id^="adtab-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('adpanel-overview').style.display='block';
+  document.getElementById('adtab-overview').classList.add('active');
+  // Clear content
+  document.getElementById('adOverviewGrid').innerHTML = '<div style="color:var(--muted);font-size:13px;grid-column:span 2"><span class="spin"></span>Loading…</div>';
+  document.getElementById('adTagsArea').innerHTML = '<span class="spin"></span>';
+  document.getElementById('adSecretsTbody').innerHTML = '<tr class="lrow"><td colspan="6"><span class="spin"></span></td></tr>';
+  document.getElementById('adPermsTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span></td></tr>';
+  document.getElementById('adScopesTbody').innerHTML = '<tr class="lrow"><td colspan="5"><span class="spin"></span></td></tr>';
+  document.getElementById('adOwnersTbody').innerHTML = '<tr class="lrow"><td colspan="3"><span class="spin"></span></td></tr>';
+  document.getElementById('adSPGrid').innerHTML = '';
+  document.getElementById('adSPRolesTbody').innerHTML = '<tr class="lrow"><td colspan="4"><span class="spin"></span></td></tr>';
+  openModal('mAppDetails');
+
+  // Load everything in parallel
+  loadAppOverview();
+  loadAppSecretDetails();
+  loadAppPermDetails();
+  loadAppOwners();
+  loadAppUris();
+  loadAppSP();
+  loadAppAzureScopes();
+}
+
+async function loadAppOverview() {
+  try {
+    const d = await gGet('/applications/' + _adObjId + '?$select=id,appId,displayName,createdDateTime,description,notes,publisherDomain,signInAudience,tags,verifiedPublisher,info');
+    _adData = d;
+    const grid = document.getElementById('adOverviewGrid');
+    const item = (label, value, badge) => {
+      const v = badge ? '<span class="b ' + badge + '">' + esc(value||'—') + '</span>' : '<span style="font-family:var(--mono);font-size:12px;color:var(--text)">' + esc(value||'—') + '</span>';
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-family:var(--mono);margin-bottom:5px">' + label + '</div>' + v + '</div>';
+    };
+    const audience = d.signInAudience || '—';
+    const audBadge = audience.includes('AzureADMyOrg') ? 'b-g' : audience.includes('AzureADMultiple') ? 'b-y' : 'b-b';
+    grid.innerHTML =
+      item('Display Name', d.displayName) +
+      item('Application (Client) ID', d.appId) +
+      item('Object ID', d.id) +
+      item('Created', d.createdDateTime ? new Date(d.createdDateTime).toLocaleString() : '—') +
+      item('Publisher Domain', d.publisherDomain) +
+      item('Sign-in Audience', d.signInAudience, audBadge) +
+      item('Description', d.description || '(none)') +
+      item('Notes', d.notes || '(none)') +
+      item('Verified Publisher', d.verifiedPublisher?.displayName || 'Not verified', d.verifiedPublisher ? 'b-g' : 'b-gr') +
+      item('Support URL', d.info?.supportUrl || '—') +
+      item('Marketing URL', d.info?.marketingUrl || '—') +
+      item('Privacy URL', d.info?.privacyStatementUrl || '—');
+
+    // Tags
+    const tags = d.tags || [];
+    document.getElementById('adTagsArea').innerHTML = tags.length
+      ? tags.map(t => '<span class="b b-b" style="margin:2px 4px;display:inline-block">' + esc(t) + '</span>').join('')
+      : '<span style="color:var(--muted);font-size:13px">No tags configured</span>';
+  } catch(e) {
+    document.getElementById('adOverviewGrid').innerHTML = '<div style="color:var(--danger);grid-column:span 2">❌ ' + esc(e.message) + '</div>';
+  }
+}
+
+async function loadAppSecretDetails() {
+  try {
+    const d = await gGet('/applications/' + _adObjId + '?$select=passwordCredentials,keyCredentials');
+    const creds = d.passwordCredentials || [];
+    const now = new Date();
+    const tbody = document.getElementById('adSecretsTbody');
+    if (!creds.length) { tbody.innerHTML = '<tr class="erow"><td colspan="6">No secrets configured</td></tr>'; return; }
+    tbody.innerHTML = creds.map(c => {
+      const exp = c.endDateTime ? new Date(c.endDateTime) : null;
+      const start = c.startDateTime ? new Date(c.startDateTime) : null;
+      const days = exp ? Math.round((exp - now) / 864e5) : null;
+      const cls = days === null ? 'b-gr' : days < 0 ? 'b-r' : days < 30 ? 'b-y' : days < 90 ? 'b-b' : 'b-g';
+      const lbl = days === null ? '—' : days < 0 ? Math.abs(days)+'d expired' : days+'d';
+      const st = days === null ? '—' : days < 0 ? 'Expired' : days < 30 ? 'Critical' : days < 90 ? 'Expiring Soon' : 'Healthy';
+      return '<tr><td>' + esc(c.displayName||'(unnamed)') + '</td><td class="mono">' + (c.keyId||'').substring(0,12) + '…</td>' +
+        '<td>' + (start ? start.toLocaleDateString() : '—') + '</td>' +
+        '<td>' + (exp ? exp.toLocaleDateString() : '—') + '</td>' +
+        '<td><span class="b ' + cls + '">' + lbl + '</span></td>' +
+        '<td><span class="b ' + cls + '">' + st + '</span></td></tr>';
+    }).join('');
+  } catch(e) { document.getElementById('adSecretsTbody').innerHTML = '<tr class="erow"><td colspan="6">❌ ' + esc(e.message) + '</td></tr>'; }
+}
+
+async function loadAppPermDetails() {
+  try {
+    const d = await gGet('/applications/' + _adObjId + '?$select=requiredResourceAccess');
+    // Resolve Graph permission names
+    if (!_graphSPData) {
+      const gs = await gGet("/servicePrincipals?$filter=appId eq '00000003-0000-0000-c000-000000000000'&$select=appRoles,oauth2PermissionScopes");
+      _graphSPData = gs.value?.[0] || {};
+    }
+    const appRoleMap = {}, scopeMap = {};
+    (_graphSPData.appRoles || []).forEach(r => { appRoleMap[r.id] = r.value || r.displayName; });
+    (_graphSPData.oauth2PermissionScopes || []).forEach(s => { scopeMap[s.id] = s.value || s.adminConsentDisplayName; });
+
+    _adPermsData = [];
+    (d.requiredResourceAccess || []).forEach(res => {
+      const apiName = res.resourceAppId === '00000003-0000-0000-c000-000000000000' ? 'Microsoft Graph'
+        : res.resourceAppId === '00000007-0000-0000-c000-000000000000' ? 'Dynamics CRM'
+        : res.resourceAppId;
+      (res.resourceAccess || []).forEach(p => {
+        const pName = p.type === 'Role' ? (appRoleMap[p.id] || p.id) : (scopeMap[p.id] || p.id);
+        _adPermsData.push({ api: apiName, permission: pName, type: p.type === 'Role' ? 'Application' : 'Delegated', adminConsent: p.type === 'Role' ? 'Required' : 'Optional' });
+      });
+    });
+    const tbody = document.getElementById('adPermsTbody');
+    tbody.innerHTML = _adPermsData.length ? _adPermsData.map(p =>
+      '<tr><td><span class="b b-b">' + esc(p.api) + '</span></td>' +
+      '<td><strong>' + esc(p.permission) + '</strong></td>' +
+      '<td><span class="b ' + (p.type==='Application'?'b-r':'b-g') + '">' + esc(p.type) + '</span></td>' +
+      '<td><span class="b ' + (p.adminConsent==='Required'?'b-y':'b-gr') + '">' + esc(p.adminConsent) + '</span></td></tr>'
+    ).join('') : '<tr class="erow"><td colspan="4">No API permissions configured</td></tr>';
+  } catch(e) { document.getElementById('adPermsTbody').innerHTML = '<tr class="erow"><td colspan="4">❌ ' + esc(e.message) + '</td></tr>'; }
+}
+
+async function loadAppOwners() {
+  try {
+    const d = await gGet('/applications/' + _adObjId + '/owners?$select=id,displayName,userPrincipalName');
+    _adOwnersData = d.value || [];
+    const tbody = document.getElementById('adOwnersTbody');
+    tbody.innerHTML = _adOwnersData.length ? _adOwnersData.map(o =>
+      '<tr><td><strong>' + esc(o.displayName||'') + '</strong></td>' +
+      '<td class="mono">' + esc(o.userPrincipalName||'') + '</td>' +
+      '<td class="mono">' + esc(o.id||'') + '</td></tr>'
+    ).join('') : '<tr class="erow"><td colspan="3">No owners assigned</td></tr>';
+  } catch(e) { document.getElementById('adOwnersTbody').innerHTML = '<tr class="erow"><td colspan="3">❌ ' + esc(e.message) + '</td></tr>'; }
+}
+
+async function loadAppUris() {
+  try {
+    const d = await gGet('/applications/' + _adObjId + '?$select=web,spa,publicClient,appRoles,optionalClaims,info');
+    const allRedirects = [
+      ...((d.web?.redirectUris)||[]).map(u=>'Web: '+u),
+      ...((d.spa?.redirectUris)||[]).map(u=>'SPA: '+u),
+      ...((d.publicClient?.redirectUris)||[]).map(u=>'Mobile: '+u)
+    ];
+    document.getElementById('adRedirectUris').innerHTML = allRedirects.length
+      ? allRedirects.map(u => '<div style="margin-bottom:4px;word-break:break-all">' + esc(u) + '</div>').join('')
+      : '<span style="color:var(--muted)">No redirect URIs</span>';
+    document.getElementById('adLogoutUrl').innerHTML =
+      '<div>' + esc(d.web?.logoutUrl || '(none)') + '</div>' +
+      '<div style="margin-top:6px;color:var(--muted)">Homepage: ' + esc(d.info?.termsOfServiceUrl||'—') + '</div>';
+    const roles = d.appRoles || [];
+    document.getElementById('adAppRoles').innerHTML = roles.length
+      ? roles.map(r => '<div style="margin-bottom:6px"><span class="b b-p">' + esc(r.value||r.displayName) + '</span> <span style="color:var(--muted);font-size:11px">' + esc(r.allowedMemberTypes?.join(',')||'') + (r.isEnabled?'':' — disabled') + '</span></div>').join('')
+      : '<span style="color:var(--muted)">No app roles exposed</span>';
+    const claims = d.optionalClaims;
+    document.getElementById('adTokenCfg').innerHTML = claims
+      ? '<div style="font-size:12px">Access: ' + (claims.accessToken||[]).map(c=>c.name).join(', ') + '</div>' +
+        '<div style="font-size:12px">ID: ' + (claims.idToken||[]).map(c=>c.name).join(', ') + '</div>'
+      : '<span style="color:var(--muted)">No optional claims configured</span>';
+  } catch(e) {}
+}
+
+async function loadAppSP() {
+  try {
+    const sp = await gGet("/servicePrincipals?$filter=appId eq '" + _adAppId + "'&$select=id,displayName,accountEnabled,servicePrincipalType,appRoleAssignmentRequired,createdDateTime,homepage,replyUrls,tags,notes");
+    const s = sp.value?.[0];
+    const grid = document.getElementById('adSPGrid');
+    if (!s) { grid.innerHTML = '<div style="color:var(--muted);grid-column:span 2;font-size:13px">No service principal found — app may not be consented in this tenant</div>'; return; }
+    _adSpData = s;
+    const item = (label, value, badge) => {
+      const v = badge ? '<span class="b ' + badge + '">' + esc(String(value||'—')) + '</span>' : '<span style="font-family:var(--mono);font-size:12px">' + esc(String(value||'—')) + '</span>';
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-family:var(--mono);margin-bottom:5px">' + label + '</div>' + v + '</div>';
+    };
+    grid.innerHTML =
+      item('SP Object ID', s.id) +
+      item('Type', s.servicePrincipalType, 'b-b') +
+      item('Sign-in Enabled', s.accountEnabled ? 'Yes' : 'No', s.accountEnabled ? 'b-g' : 'b-r') +
+      item('Assignment Required', s.appRoleAssignmentRequired ? 'Yes' : 'No', s.appRoleAssignmentRequired ? 'b-y' : 'b-gr') +
+      item('Created', s.createdDateTime ? new Date(s.createdDateTime).toLocaleString() : '—') +
+      item('Homepage', s.homepage || '—') +
+      item('SP Tags', (s.tags||[]).join(', ') || '(none)') +
+      item('Notes', s.notes || '(none)');
+
+    // Load app role assignments (who uses this app)
+    const ara = await gGet('/servicePrincipals/' + s.id + '/appRoleAssignedTo?$top=100');
+    const tbody = document.getElementById('adSPRolesTbody');
+    const assigns = ara.value || [];
+    tbody.innerHTML = assigns.length ? assigns.map(a =>
+      '<tr><td><strong>' + esc(a.principalDisplayName||'') + '</strong></td>' +
+      '<td><span class="b ' + (a.principalType==='Group'?'b-g':a.principalType==='ServicePrincipal'?'b-b':'b-gr') + '">' + esc(a.principalType||'') + '</span></td>' +
+      '<td>' + esc(a.appRoleId === '00000000-0000-0000-0000-000000000000' ? 'Default Access' : a.appRoleId) + '</td>' +
+      '<td>' + (a.createdDateTime ? new Date(a.createdDateTime).toLocaleDateString() : '—') + '</td></tr>'
+    ).join('') : '<tr class="erow"><td colspan="4">No app role assignments (app not assigned to users/groups)</td></tr>';
+  } catch(e) { document.getElementById('adSPGrid').innerHTML = '<div style="color:var(--danger);grid-column:span 2">❌ ' + esc(e.message) + '</div>'; }
+}
+
+async function loadAppAzureScopes() {
+  _adScopesData = [];
+  if (!_subs.length) return;
+  try {
+    // Get SP ID first
+    const sp = await gGet("/servicePrincipals?$filter=appId eq '" + _adAppId + "'&$select=id");
+    const spId = sp.value?.[0]?.id;
+    if (!spId) {
+      document.getElementById('adScopesTbody').innerHTML = '<tr class="erow"><td colspan="5">No service principal — no Azure RBAC assignments possible</td></tr>';
+      document.getElementById('adScopeTotal').textContent = 0;
+      return;
+    }
+    for (const sub of _subs) {
+      try {
+        const d = await arm('/subscriptions/' + sub.subscriptionId + '/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&$filter=principalId eq '' + spId + ''');
+        const rdData = await arm('/subscriptions/' + sub.subscriptionId + '/providers/Microsoft.Authorization/roleDefinitions?api-version=2022-04-01');
+        const rdMap = {};
+        (rdData.value || []).forEach(r => { rdMap[r.id] = r.properties?.roleName || r.name; });
+        (d.value || []).forEach(a => {
+          const scope = a.properties?.scope || '';
+          const parts = scope.split('/');
+          const scopeType = scope === '/subscriptions/' + sub.subscriptionId ? 'Subscription'
+            : parts.includes('resourceGroups') && parts.length === 5 ? 'Resource Group'
+            : parts.length > 5 ? 'Resource' : 'Other';
+          _adScopesData.push({
+            role: rdMap[a.properties?.roleDefinitionId] || '—',
+            scope: parts[parts.length-1] || scope,
+            scopeFull: scope,
+            scopeType,
+            subName: sub.displayName
+          });
+        });
+      } catch(e) {}
+    }
+    const tbody = document.getElementById('adScopesTbody');
+    document.getElementById('adScopeTotal').textContent = _adScopesData.length;
+    document.getElementById('adScopeOwner').textContent = _adScopesData.filter(r=>r.role==='Owner').length;
+    document.getElementById('adScopeContrib').textContent = _adScopesData.filter(r=>r.role==='Contributor').length;
+    document.getElementById('adScopeReader').textContent = _adScopesData.filter(r=>r.role==='Reader').length;
+    const rc = r => r==='Owner'?'b-r':r==='Contributor'?'b-y':'b-b';
+    const sc = s => s==='Subscription'?'b-b':s==='Resource Group'?'b-g':s==='Resource'?'b-p':'b-gr';
+    tbody.innerHTML = _adScopesData.length ? _adScopesData.map(r =>
+      '<tr><td><span class="b ' + rc(r.role) + '">' + esc(r.role) + '</span></td>' +
+      '<td><strong>' + esc(r.scope) + '</strong></td>' +
+      '<td><span class="b ' + sc(r.scopeType) + '">' + esc(r.scopeType) + '</span></td>' +
+      '<td>' + esc(r.subName) + '</td>' +
+      '<td class="mono" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="' + esc(r.scopeFull) + '">' + esc(r.scopeFull) + '</td></tr>'
+    ).join('') : '<tr class="erow"><td colspan="5">No Azure RBAC assignments found across ' + _subs.length + ' subscription(s)</td></tr>';
+  } catch(e) { document.getElementById('adScopesTbody').innerHTML = '<tr class="erow"><td colspan="5">❌ ' + esc(e.message) + '</td></tr>'; }
+}
+
+function exportAppDetails() {
+  // Export all sections to one CSV
+  const rows = [
+    ['=== OVERVIEW ==='],
+    ['Field','Value'],
+    ['Name', _adData.displayName],['App ID', _adData.appId],['Object ID', _adData.id],
+    ['Created', _adData.createdDateTime],['Audience', _adData.signInAudience],
+    ['Publisher', _adData.publisherDomain],['Description', _adData.description],
+    ['Tags', (_adData.tags||[]).join('; ')],[],
+    ['=== SECRETS ==='],
+    ['Name','Expires','Days Left'],
+    ...(_adData.passwordCredentials||[]).map(c=>{
+      const exp=c.endDateTime?new Date(c.endDateTime):null;
+      const days=exp?Math.round((exp-new Date())/864e5):null;
+      return [c.displayName||'(unnamed)', exp?exp.toLocaleDateString():'—', days!==null?days:'—'];
+    }),[],
+    ['=== API PERMISSIONS ==='],
+    ['API','Permission','Type','Admin Consent'],
+    ..._adPermsData.map(p=>[p.api,p.permission,p.type,p.adminConsent]),[],
+    ['=== AZURE SCOPES ==='],
+    ['Role','Scope','Scope Type','Subscription'],
+    ..._adScopesData.map(r=>[r.role,r.scope,r.scopeType,r.subName]),[],
+    ['=== OWNERS ==='],
+    ['Name','UPN'],
+    ..._adOwnersData.map(o=>[o.displayName,o.userPrincipalName])
+  ];
+  dlCsv('app-details-' + (_adName||'app').replace(/[^a-z0-9]/gi,'-') + '.csv', rows);
+}
 </script>
 </body></html>
