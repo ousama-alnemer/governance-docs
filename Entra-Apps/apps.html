@@ -1183,13 +1183,18 @@ function showKVSearchModal(appName, appId, kvToken) {
       <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end">
         <div style="flex:1">
           <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Match prefix (first N characters)</div>
-          <input id="kvPrefixInput" value="${esc(appName.substring(0,3))}" 
+          <input id="kvPrefixInput" value="" 
+            placeholder="Type prefix to search…"
             style="width:100%;padding:9px 12px;border:1.5px solid #d0d4db;border-radius:7px;font-size:14px;font-family:monospace"
             onkeydown="if(event.key==='Enter')searchKVSecrets('${esc(appName)}','${esc(appId)}')"/>
         </div>
         <button onclick="searchKVSecrets('${esc(appName)}','${esc(appId)}')"
           style="padding:9px 18px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">
           🔍 Search
+        </button>
+        <button onclick="document.getElementById('kvPrefixInput').value='';searchKVSecrets('${esc(appName)}','${esc(appId)}')"
+          style="padding:9px 14px;background:#f3f4f6;color:#444;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap">
+          Show All
         </button>
       </div>
 
@@ -1217,12 +1222,13 @@ function showKVSearchModal(appName, appId, kvToken) {
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
 
-  // Auto-search on open with first 3 chars
-  searchKVSecrets(appName, appId);
+  // Wait for user to type and click Search
 }
 
 async function searchKVSecrets(appName, appId) {
-  const prefix = (document.getElementById('kvPrefixInput')?.value || appName.substring(0,3)).toLowerCase();
+  const rawPrefix = (document.getElementById('kvPrefixInput')?.value || appName.substring(0,3));
+  // search case-insensitive — compare lowercase
+  const prefix = rawPrefix.toLowerCase();
   const progressWrap = document.getElementById('kvSearchProgress');
   const progressFill = document.getElementById('kvSearchProgressFill');
   const progressLabel = document.getElementById('kvSearchProgressLabel');
@@ -1233,65 +1239,81 @@ async function searchKVSecrets(appName, appId) {
   if (progressWrap) progressWrap.style.display = 'block';
   if (resultsDiv) resultsDiv.style.display = 'none';
   if (emptyDiv) emptyDiv.style.display = 'none';
-  if (progressFill) { progressFill.style.width = '15%'; }
+  if (progressFill) progressFill.style.width = '15%';
   if (progressLabel) progressLabel.textContent = 'Listing all secrets in Key Vault…';
 
   try {
     const kvToken = sessionStorage.getItem('kv_token');
     if (!kvToken) { notify('err', 'No KV token — please try again'); return; }
 
-    // List all secrets
-    const r = await fetch(`${KV_URL}/secrets?api-version=7.4&maxresults=200`, {
-      headers: { Authorization: 'Bearer ' + kvToken }
-    });
-    if (!r.ok) throw new Error('KV list failed: ' + r.status + ' ' + r.statusText);
-    const data = await r.json();
-    const secrets = data.value || [];
+    // List all secrets — paginate if needed
+    let secrets = [], nextUrl = `${KV_URL}/secrets?api-version=7.4&maxresults=200`;
+    while (nextUrl) {
+      const r = await fetch(nextUrl, { headers: { Authorization: 'Bearer ' + kvToken } });
+      if (!r.ok) {
+        const errText = await r.text().catch(()=>r.statusText);
+        throw new Error(`KV list failed (${r.status}): ${errText}`);
+      }
+      const data = await r.json();
+      secrets = secrets.concat(data.value || []);
+      nextUrl = data.nextLink || null;
+    }
 
     if (progressFill) progressFill.style.width = '60%';
-    if (progressLabel) progressLabel.textContent = `Found ${secrets.length} secrets — filtering by "${prefix}"…`;
 
-    // Filter by prefix match (first N chars of secret name)
+    // Show ALL secrets if prefix is empty, else filter
+    // Match: case-insensitive prefix on the secret name
     const appNameClean = appName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const matched = secrets
-      .map(s => {
-        const name = s.id.split('/').pop().toLowerCase();
-        const prefixMatch = name.startsWith(prefix);
-        const appMatch = name.startsWith(appNameClean.substring(0, prefix.length));
-        // Score: exact prefix match = 3, app name prefix = 2, contains prefix = 1
-        const score = name === appNameClean ? 4
-          : name.startsWith(appNameClean) ? 3
-          : prefixMatch ? 2
-          : name.includes(prefix) ? 1 : 0;
-        return { name: s.id.split('/').pop(), id: s.id, score, enabled: s.attributes?.enabled !== false };
-      })
-      .filter(s => s.score > 0)
-      .sort((a,b) => b.score - a.score);
+
+    const scored = secrets.map(s => {
+      const rawName = s.id.split('/').pop();       // keep original casing for display
+      const nameLow = rawName.toLowerCase();
+      const score =
+        nameLow === appNameClean                   ? 4  // exact match
+        : nameLow.startsWith(appNameClean)         ? 3  // starts with full app name
+        : prefix && nameLow.startsWith(prefix)     ? 2  // starts with typed prefix
+        : prefix && nameLow.includes(prefix)       ? 1  // contains typed prefix
+        : !prefix                                  ? 0  // show all when no prefix
+        : -1;
+      return { name: rawName, id: s.id, score, enabled: s.attributes?.enabled !== false };
+    }).filter(s => s.score >= 0).sort((a,b) => b.score - a.score);
 
     if (progressFill) progressFill.style.width = '100%';
-    setTimeout(() => { if(progressWrap) progressWrap.style.display='none'; }, 600);
+    if (progressLabel) progressLabel.textContent = `${scored.length} secret(s) found — showing best matches first`;
+    setTimeout(() => { if(progressWrap) progressWrap.style.display='none'; }, 800);
 
-    if (!matched.length) {
-      if (emptyDiv) emptyDiv.style.display = 'block';
+    if (!scored.length) {
+      if (emptyDiv) {
+        emptyDiv.style.display = 'block';
+        emptyDiv.innerHTML = `<div style="padding:20px;color:#888;font-size:13px">
+          No secrets found matching <strong>"${esc(rawPrefix)}"</strong><br>
+          <span style="font-size:12px">KV has ${secrets.length} total secrets. Try a shorter or different prefix.</span>
+          <br><button onclick="document.getElementById('kvPrefixInput').value='';searchKVSecrets('${esc(appName)}','${esc(appId)}')"
+            style="margin-top:10px;padding:6px 14px;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:12px">
+            Show all ${secrets.length} secrets
+          </button>
+        </div>`;
+      }
       return;
     }
 
-    // Render results
     if (resultsDiv) resultsDiv.style.display = 'block';
-    const scoreLabel = s => s===4?'<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Exact</span>'
-      :s===3?'<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">App Name</span>'
-      :s===2?'<span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Prefix</span>'
-      :'<span style="background:#f3f4f6;color:#555;padding:2px 8px;border-radius:5px;font-size:11px">Contains</span>';
+    const scoreLabel = s => s===4
+      ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Exact</span>'
+      : s===3 ? '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">App Name</span>'
+      : s===2 ? '<span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700">Prefix</span>'
+      : s===1 ? '<span style="background:#f3e8ff;color:#6b21a8;padding:2px 8px;border-radius:5px;font-size:11px">Contains</span>'
+      :         '<span style="background:#f3f4f6;color:#555;padding:2px 8px;border-radius:5px;font-size:11px">All</span>';
 
-    tbody.innerHTML = matched.map(s => `<tr style="border-bottom:1px solid #e0e3e8">
-      <td style="padding:10px 13px;font-family:monospace;font-size:12px;color:#1a3a5c">
+    tbody.innerHTML = scored.map(s => `<tr style="border-bottom:1px solid #e0e3e8">
+      <td style="padding:10px 13px;font-family:monospace;font-size:13px;color:#1a3a5c;word-break:break-all">
         ${esc(s.name)}
-        ${!s.enabled ? '<span style="color:#d63031;font-size:10px;margin-left:4px">(disabled)</span>' : ''}
+        ${!s.enabled?'<span style="color:#d63031;font-size:10px;margin-left:6px">(disabled)</span>':''}
       </td>
       <td style="padding:10px 13px">${scoreLabel(s.score)}</td>
       <td style="padding:10px 13px">
         <button onclick="retrieveKVSecret('${esc(s.name)}','${esc(appId)}')"
-          style="padding:5px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+          style="padding:6px 14px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
           🔓 Retrieve
         </button>
       </td>
@@ -1299,7 +1321,12 @@ async function searchKVSecrets(appName, appId) {
 
   } catch(e) {
     if (progressWrap) progressWrap.style.display = 'none';
-    notify('err', 'KV search error: ' + e.message);
+    if (emptyDiv) {
+      emptyDiv.style.display = 'block';
+      emptyDiv.innerHTML = `<div style="padding:20px;color:#d63031;font-size:13px">❌ ${esc(e.message)}</div>`;
+    }
+    notify('err', 'KV search: ' + e.message);
+    console.error('KV search error:', e);
   }
 }
 
