@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Azure Security & App Management</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-identity-browser/3.7.1/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -523,7 +523,7 @@ let _cachedUsers={};
 
 window.addEventListener('load',async()=>{
   try{
-    ms=new window.msal.PublicClientApplication({auth:{clientId:CLIENT_ID,authority:`https://login.microsoftonline.com/${TENANT_ID}`,redirectUri:location.href.split('?')[0].split('#')[0]},cache:{cacheLocation:"sessionStorage"}});
+    ms=new msal.PublicClientApplication({auth:{clientId:CLIENT_ID,authority:`https://login.microsoftonline.com/${TENANT_ID}`,redirectUri:location.href.split('?')[0].split('#')[0]},cache:{cacheLocation:"sessionStorage"}});
     await ms.initialize();
     const r=await ms.handleRedirectPromise();
     if(r)setAcct(r.account);
