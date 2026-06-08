@@ -1163,24 +1163,14 @@ async function autoFetchSecret(appName, appId, objId, kvToken) {
   showAutoFetchModal(appName);
 
   try {
-    // ── STEP 1: Get secret hint from Entra (first credential key hint) ──
-    setStep(1, 'loading', 'Reading app secrets from Entra ID…');
-    let prefix = '';
-    if (objId) {
-      try {
-        const d = await gGet('/applications/' + objId + '?$select=passwordCredentials');
-        const creds = d.passwordCredentials || [];
-        if (creds.length > 0) {
-          // Use the display name of the first/most recent secret as hint
-          const latestCred = creds.sort((a,b)=> new Date(b.startDateTime||0)-new Date(a.startDateTime||0))[0];
-          const hint = (latestCred.displayName || appName).replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
-          prefix = hint.substring(0, 3);
-        }
-      } catch(e) {}
-    }
-    // Fallback: use app name first 3 chars
-    if (!prefix) prefix = appName.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase().substring(0,3);
-    setStep(1, 'done', `Got prefix hint: "${prefix}"`);
+    // ── STEP 1: Get secret hint from Entra — use app name as KV key ──
+    setStep(1, 'loading', 'Reading app name from Entra ID…');
+    // KV secret name = app display name with special chars replaced by dashes
+    // Use the FULL cleaned app name for matching, prefix = first 3 chars of that
+    const appNameCleanFull = appName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    let prefix = appNameCleanFull.substring(0, 3);
+    let searchName = appNameCleanFull; // what we match against in KV
+    setStep(1, 'done', `App key: "${appNameCleanFull}" — searching with prefix "${prefix}"`);
 
     // ── STEP 2: List secrets from Key Vault ──
     setStep(2, 'loading', 'Listing secrets in Key Vault…');
@@ -1194,16 +1184,16 @@ async function autoFetchSecret(appName, appId, objId, kvToken) {
     }
     setStep(2, 'done', `Found ${secrets.length} secrets in Key Vault`);
 
-    // ── STEP 3: Match by first 3 chars ──
-    setStep(3, 'loading', `Matching secrets starting with "${prefix}"…`);
-    const appNameClean = appName.toLowerCase().replace(/[^a-z0-9]/g,'-');
+    // ── STEP 3: Match by full app name then prefix ──
+    setStep(3, 'loading', `Matching "${searchName}" in Key Vault…`);
     const scored = secrets.map(s => {
       const rawName = s.id.split('/').pop();
       const nameLow = rawName.toLowerCase();
-      const score = nameLow === appNameClean ? 4
-        : nameLow.startsWith(appNameClean) ? 3
-        : nameLow.startsWith(prefix) ? 2
-        : nameLow.includes(prefix) ? 1 : 0;
+      const score = nameLow === searchName ? 4           // exact
+        : nameLow.startsWith(searchName)   ? 3           // starts with full name
+        : searchName.startsWith(nameLow)   ? 3           // name is truncated version
+        : nameLow.startsWith(prefix)       ? 2           // starts with first 3 chars
+        : nameLow.includes(prefix)         ? 1 : 0;      // contains prefix
       return { name: rawName, score, enabled: s.attributes?.enabled !== false };
     }).filter(s => s.score > 0).sort((a,b) => b.score - a.score);
 
