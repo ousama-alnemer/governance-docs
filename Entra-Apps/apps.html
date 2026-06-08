@@ -380,7 +380,9 @@ window.addEventListener('load',async()=>{
             sessionStorage.removeItem('kv_pending_action');
             sessionStorage.removeItem('kv_pending_app_name');
             sessionStorage.removeItem('kv_pending_app_id');
-            setTimeout(()=>showKVSearchModal(pName, pId, tokens.access_token), 500);
+            const pObjId = sessionStorage.getItem('kv_pending_obj_id')||'';
+            sessionStorage.removeItem('kv_pending_obj_id');
+            setTimeout(()=>autoFetchSecret(pName, pId, pObjId, tokens.access_token), 500);
           } else {
             notify('ok','Key Vault access granted');
           }
@@ -610,7 +612,7 @@ function renderApps(){
       <td style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="btn btn-p" style="font-size:11px;padding:3px 8px" onclick="openAppDetails('${esc(a.id)}','${esc(a.appId||'')}','${esc(a.displayName||'')}')">📋 Details</button>
         <button class="btn btn-o" style="font-size:11px;padding:3px 8px" onclick="viewSecrets('${esc(a.id)}','${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔑 Secrets</button>
-        <button class="btn btn-w" style="font-size:11px;padding:3px 8px" onclick="fetchSecretFromKV('${esc(a.displayName||'')}','${esc(a.appId||'')}')">🔓 Get Secret</button>
+        <button class="btn btn-w" style="font-size:11px;padding:3px 8px" onclick="fetchSecretFromKV('${esc(a.displayName||'')}','${esc(a.appId||'')}','${esc(a.id||'')}')">🔓 Get Secret</button>
         <button class="btn btn-d" style="font-size:11px;padding:3px 8px" onclick="delApp('${esc(a.id)}','${esc(a.displayName||'')}')">🗑</button>
       </td></tr>`;
   }).join('');
@@ -1128,21 +1130,20 @@ function filterByEnvStat(envKey, secVal){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ── FETCH SECRET FROM KEY VAULT BY APP NAME (first 3 chars match) ──
-async function fetchSecretFromKV(appName, appId) {
+// ── FETCH SECRET FROM KEY VAULT — AUTO FLOW ──
+async function fetchSecretFromKV(appName, appId, objId) {
   try {
-    // Get KV token
     const kvToken = await getKvTokenSilent();
     if (!kvToken) {
       notify('info', 'Getting Key Vault access…');
-      // Trigger KV auth, save pending action to resume after redirect
       sessionStorage.setItem('kv_pending_app_name', appName);
       sessionStorage.setItem('kv_pending_app_id', appId);
+      sessionStorage.setItem('kv_pending_obj_id', objId||'');
       sessionStorage.setItem('kv_pending_action', 'fetchSecret');
-      await getKvToken(); // will redirect
+      await getKvToken();
       return;
     }
-    await doFetchSecretFromKV(appName, appId, kvToken);
+    await autoFetchSecret(appName, appId, objId, kvToken);
   } catch(e) {
     if (e.message && e.message.includes('Redirecting')) return;
     notify('err', 'KV error: ' + e.message);
@@ -1156,8 +1157,211 @@ async function getKvTokenSilent() {
   return null;
 }
 
-async function doFetchSecretFromKV(appName, appId, kvToken) {
-  // Show searching modal immediately
+// Main auto flow: get secret hint from Entra → search KV → show result
+async function autoFetchSecret(appName, appId, objId, kvToken) {
+  // Show the progress modal immediately
+  showAutoFetchModal(appName);
+
+  try {
+    // ── STEP 1: Get secret hint from Entra (first credential key hint) ──
+    setStep(1, 'loading', 'Reading app secrets from Entra ID…');
+    let prefix = '';
+    if (objId) {
+      try {
+        const d = await gGet('/applications/' + objId + '?$select=passwordCredentials');
+        const creds = d.passwordCredentials || [];
+        if (creds.length > 0) {
+          // Use the display name of the first/most recent secret as hint
+          const latestCred = creds.sort((a,b)=> new Date(b.startDateTime||0)-new Date(a.startDateTime||0))[0];
+          const hint = (latestCred.displayName || appName).replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
+          prefix = hint.substring(0, 3);
+        }
+      } catch(e) {}
+    }
+    // Fallback: use app name first 3 chars
+    if (!prefix) prefix = appName.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase().substring(0,3);
+    setStep(1, 'done', `Got prefix hint: "${prefix}"`);
+
+    // ── STEP 2: List secrets from Key Vault ──
+    setStep(2, 'loading', 'Listing secrets in Key Vault…');
+    let secrets = [], nextUrl = `${KV_URL}/secrets?api-version=7.4&maxresults=200`;
+    while (nextUrl) {
+      const r = await fetch(nextUrl, { headers: { Authorization: 'Bearer ' + kvToken } });
+      if (!r.ok) { const t = await r.text().catch(()=>r.statusText); throw new Error(`KV list failed (${r.status}): ${t}`); }
+      const data = await r.json();
+      secrets = secrets.concat(data.value || []);
+      nextUrl = data.nextLink || null;
+    }
+    setStep(2, 'done', `Found ${secrets.length} secrets in Key Vault`);
+
+    // ── STEP 3: Match by first 3 chars ──
+    setStep(3, 'loading', `Matching secrets starting with "${prefix}"…`);
+    const appNameClean = appName.toLowerCase().replace(/[^a-z0-9]/g,'-');
+    const scored = secrets.map(s => {
+      const rawName = s.id.split('/').pop();
+      const nameLow = rawName.toLowerCase();
+      const score = nameLow === appNameClean ? 4
+        : nameLow.startsWith(appNameClean) ? 3
+        : nameLow.startsWith(prefix) ? 2
+        : nameLow.includes(prefix) ? 1 : 0;
+      return { name: rawName, score, enabled: s.attributes?.enabled !== false };
+    }).filter(s => s.score > 0).sort((a,b) => b.score - a.score);
+
+    if (!scored.length) {
+      setStep(3, 'warn', `No secrets found matching "${prefix}" — showing manual search`);
+      showManualSearch(appName, appId, kvToken, secrets);
+      return;
+    }
+    setStep(3, 'done', `${scored.length} match(es) found — best: "${scored[0].name}"`);
+
+    // ── STEP 4: Retrieve best match secret value ──
+    setStep(4, 'loading', `Retrieving "${scored[0].name}" from Key Vault…`);
+    const rv = await fetch(`${KV_URL}/secrets/${scored[0].name}?api-version=7.4`, {
+      headers: { Authorization: 'Bearer ' + kvToken }
+    });
+    if (!rv.ok) { const t = await rv.text().catch(()=>rv.statusText); throw new Error(`KV get failed (${rv.status}): ${t}`); }
+    const secretData = await rv.json();
+    setStep(4, 'done', 'Secret retrieved successfully!');
+
+    // Show results after a brief pause
+    setTimeout(() => {
+      closeAutoModal();
+      if (scored.length === 1) {
+        // Single match — show copy modal directly
+        showSecretModal(scored[0].name, appId, secretData.value);
+        const statusEl = document.getElementById('kvSaveStatus');
+        if (statusEl) statusEl.innerHTML = '✅ Retrieved from: <code>' + esc(scored[0].name) + '</code>';
+      } else {
+        // Multiple matches — show selection
+        showMatchSelection(scored, appId, kvToken, secretData.value, scored[0].name);
+      }
+    }, 600);
+
+  } catch(e) {
+    setStepError(e.message);
+  }
+}
+
+// ── PROGRESS MODAL ──
+function showAutoFetchModal(appName) {
+  const ex = document.getElementById('autoFetchModal'); if(ex) ex.remove();
+  const modal = document.createElement('div');
+  modal.id = 'autoFetchModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Arial,sans-serif">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <span style="font-size:20px">🔐</span>
+        <div>
+          <h2 style="font-size:16px;font-weight:700;color:#1a3a5c">Retrieving Secret</h2>
+          <div style="font-size:12px;color:#888;margin-top:2px">${esc(appName)}</div>
+        </div>
+      </div>
+      ${stepRow(1,'Read secret hint from Entra ID')}
+      ${stepRow(2,'List secrets from Key Vault')}
+      ${stepRow(3,'Match by first 3 characters')}
+      ${stepRow(4,'Retrieve secret value')}
+      <div id="autoFetchError" style="display:none;margin-top:16px;padding:12px;background:#fff5f5;border:1px solid #fcc;border-radius:8px;font-size:13px;color:#d63031"></div>
+      <div style="margin-top:20px;text-align:center">
+        <button onclick="closeAutoModal()" style="padding:8px 20px;background:#f3f4f6;color:#444;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function stepRow(n, label) {
+  return `<div id="step${n}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5">
+    <div id="step${n}Icon" style="width:28px;height:28px;border-radius:50%;background:#e8eaed;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-weight:700;color:#888">${n}</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:500;color:#1a3a5c">${label}</div>
+      <div id="step${n}Sub" style="font-size:11px;color:#888;margin-top:2px;font-family:monospace"></div>
+      <div id="step${n}Bar" style="height:3px;background:#e0e3e8;border-radius:2px;margin-top:6px;overflow:hidden;display:none">
+        <div style="height:100%;background:#1a6ef5;border-radius:2px;width:40%;animation:indeterminate 1.2s ease-in-out infinite"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function setStep(n, state, msg) {
+  const icon = document.getElementById('step'+n+'Icon');
+  const sub  = document.getElementById('step'+n+'Sub');
+  const bar  = document.getElementById('step'+n+'Bar');
+  if (!icon) return;
+  if (state === 'loading') {
+    icon.style.background = '#dbeafe'; icon.style.color = '#1a6ef5';
+    icon.innerHTML = '<span class="spin" style="width:12px;height:12px;border-width:2px"></span>';
+    if (bar) bar.style.display = 'block';
+  } else if (state === 'done') {
+    icon.style.background = '#dcfce7'; icon.style.color = '#166534';
+    icon.innerHTML = '✓';
+    if (bar) bar.style.display = 'none';
+  } else if (state === 'warn') {
+    icon.style.background = '#fef9c3'; icon.style.color = '#854d0e';
+    icon.innerHTML = '⚠';
+    if (bar) bar.style.display = 'none';
+  }
+  if (sub && msg) sub.textContent = msg;
+}
+
+function setStepError(msg) {
+  const errEl = document.getElementById('autoFetchError');
+  if (errEl) { errEl.style.display='block'; errEl.textContent = '❌ ' + msg; }
+  [1,2,3,4].forEach(n => {
+    const bar = document.getElementById('step'+n+'Bar');
+    if (bar) bar.style.display = 'none';
+  });
+}
+
+function closeAutoModal() {
+  const m = document.getElementById('autoFetchModal'); if(m) m.remove();
+}
+
+// Multiple matches — let user pick
+function showMatchSelection(matches, appId, kvToken, firstValue, firstName) {
+  const ex = document.getElementById('matchSelectModal'); if(ex) ex.remove();
+  const modal = document.createElement('div');
+  modal.id = 'matchSelectModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  const scoreLabel = s => s===4?'<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:4px;font-size:11px">Exact</span>'
+    :s===3?'<span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:4px;font-size:11px">App Name</span>'
+    :s===2?'<span style="background:#fef9c3;color:#854d0e;padding:1px 7px;border-radius:4px;font-size:11px">Prefix</span>'
+    :'<span style="background:#f3e8ff;color:#6b21a8;padding:1px 7px;border-radius:4px;font-size:11px">Contains</span>';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Arial,sans-serif">
+      <h2 style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:16px">🔐 Multiple Matches Found — Select One</h2>
+      <div style="border:1px solid #e0e3e8;border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto">
+        ${matches.map(m=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid #f0f2f5;cursor:pointer" 
+               onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background=''"
+               onclick="pickAndRetrieve('${esc(m.name)}','${esc(appId)}')">
+            <div style="flex:1;font-family:monospace;font-size:13px;color:#1a3a5c">${esc(m.name)}</div>
+            <div>${scoreLabel(m.score)}</div>
+            <div style="color:#1a6ef5;font-size:12px;font-weight:600">Select →</div>
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:16px;text-align:right">
+        <button onclick="document.getElementById('matchSelectModal').remove()" style="padding:8px 18px;background:#f3f4f6;color:#444;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function pickAndRetrieve(secretName, appId) {
+  document.getElementById('matchSelectModal')?.remove();
+  try {
+    const kvToken = sessionStorage.getItem('kv_token');
+    const r = await fetch(`${KV_URL}/secrets/${secretName}?api-version=7.4`, { headers:{Authorization:'Bearer '+kvToken} });
+    if(!r.ok) throw new Error(r.statusText);
+    const d = await r.json();
+    showSecretModal(secretName, appId, d.value);
+    const statusEl = document.getElementById('kvSaveStatus');
+    if(statusEl) statusEl.innerHTML = '✅ Retrieved: <code>'+esc(secretName)+'</code>';
+  } catch(e) { notify('err', e.message); }
+}
+
+// Manual fallback search
+function showManualSearch(appName, appId, kvToken, allSecrets) {
+  closeAutoModal();
   showKVSearchModal(appName, appId, kvToken);
 }
 
