@@ -153,11 +153,23 @@ code{display:block;background:#16202e;color:#9cdcfe;padding:14px 16px;border-rad
   .btn-inline-solution{margin-top:2px}
 }
 </style>
+<script>
+var BASE = window.location.origin + '/Entra-Apps/';
+var ROOT = window.location.origin + '/';
+function goSection(p){ window.location.href = BASE + p; }
+function goRoot(){ window.location.href = ROOT + 'index.html'; }
+function goGov(){ window.location.href = BASE + 'gov-index.html'; }
+</script>
 </head>
 <body>
 <div style="background:#fff;border-bottom:1px solid #dde3ea;padding:10px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-  <span style="font-size:13px;font-weight:700;color:#1a3a5c;margin-right:4px">⚡ Azure Governance</span>
-  <a href="gov-cost.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;">💰 Cost Management</a> <a href="gov-security.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🔒 Security & Compliance</a> <a href="gov-architecture.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🏗 Architecture</a> <a href="gov-shared.html" style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#444;border:1px solid #d0d4db;background:#fff;">🔧 Shared Services</a> 
+  <button onclick="goGov()" style="font-size:13px;font-weight:700;color:#1a3a5c;border:none;background:none;cursor:pointer;margin-right:4px;padding:0">⚡ Azure Governance</button>
+  <button onclick="goSection('gov-cost.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;">💰 Cost Management</button>
+  <button onclick="goSection('gov-security.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🔒 Security & Compliance</button>
+  <button onclick="goSection('gov-architecture.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🏗 Architecture</button>
+  <button onclick="goSection('gov-shared.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🔧 Shared Services</button>
+  
+  <button onclick="goRoot()" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#1a3a5c;border:1px solid #1a3a5c;background:#f0f4f8;cursor:pointer;margin-left:auto">← Main Portal</button>
 </div>
 <div style="background:#f0f2f5;padding:16px 20px 0">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
