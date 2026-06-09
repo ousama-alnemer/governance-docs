@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>App Registrations — Azure Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#070a13;
+      --surface:#0b0f19;
+      --card:#0f172a;
+      --card2:#1e293b;
+      --card3:#334155;
+      --border:#1e293b;
+      --accent:#06b6d4;
+      --accent2:#10b981;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --purple:#8b5cf6;
+      --text:#f1f5f9;
+      --muted:#94a3b8;
+      --mono:'JetBrains Mono',monospace;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:16px}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--card3);border-radius:3px}
+    
+    /* Login Screen Component */
+    .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#070a13 0%,#0f172a 100%)}
+    .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:420px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+    .login-logo{font-size:44px;margin-bottom:20px;display:block}
+    .login-card h1{font-family:var(--mono);font-size:23px;font-weight:700;margin-bottom:8px;line-height:1.4;color:var(--accent)}
+    .login-card p{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.7}
+    .btn-ms{width:100%;padding:13px;background:linear-gradient(135deg,#0078d4,#005fa3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s}
+    .btn-ms:hover{opacity:.9}
+    
+    /* Navigation Header */
+    .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:62px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+    .header-brand{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);text-decoration:none}
+    .hdr-nav{display:flex;gap:4px;margin-left:8px}
+    .hdr-link{padding:7px 14px;border-radius:7px;border:1px solid transparent;color:var(--muted);font-size:14px;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+    .hdr-link:hover{border-color:var(--border);color:var(--text)}
+    .hdr-link.active{background:var(--card);border-color:var(--border);color:var(--accent)}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .user-pill{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px}
+    .user-dot{width:7px;height:7px;background:var(--accent2);border-radius:50%}
+    .btn-sm{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+    .btn-sm:hover{border-color:var(--danger);color:var(--danger)}
+    
+    /* Grid & Layout containers */
+    .main{padding:20px;max-width:1500px;margin:0 auto}
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+    .sec-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1.2px;display:flex;align-items:center;gap:8px}
+    .sec-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px}
+    .ctrls{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+    .cg{display:flex;flex-direction:column;gap:4px}
+    .clabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-family:var(--mono);font-weight:500}
+    
+    /* Inputs, Buttons, & Controls */
+    input,select,textarea{background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:10px 13px;color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif;transition:border-color .15s}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(6,182,212,0.15)}
+    input::placeholder{color:var(--muted)}
+    select option{background:var(--surface)}
+    .btn{padding:10px 18px;border-radius:8px;border:1px solid var(--border);font-size:15px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+    .btn:disabled{opacity:.35;cursor:not-allowed}
+    .btn-p{background:var(--accent);border-color:var(--accent);color:#070a13;font-weight:600}.btn-p:hover:not(:disabled){opacity:0.9}
+    .btn-g{background:var(--accent2);border-color:var(--accent2);color:#070a13;font-weight:600}.btn-g:hover:not(:disabled){opacity:0.85}
+    .btn-d{background:transparent;border-color:var(--danger);color:var(--danger)}.btn-d:hover:not(:disabled){background:var(--danger);color:#fff}
+    .btn-o{background:var(--card);border-color:var(--border);color:var(--text)}.btn-o:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+    .btn-w{background:var(--warn);border-color:var(--warn);color:#070a13;font-weight:600}
+    
+    /* Metric Cards */
+    .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+    .sc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:120px;transition:border-color 0.2s}
+    .sc-n{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1}
+    .sc-l{font-size:13px;color:var(--muted);margin-top:5px}
+    
+    /* Table Styling */
+    .tbl-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
+    .tbl-wrap.sc2{overflow-x:auto;overflow-y:auto;max-height:520px}
+    table{width:100%;border-collapse:collapse;font-size:15px}
+    thead{position:sticky;top:0;z-index:10}
+    thead tr{background:var(--card)}
+    th{padding:11px 15px;text-align:left;font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:13px 15px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;font-size:14px}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover{background:rgba(6,182,212,0.04)}
+    .mono{font-family:var(--mono);font-size:11px;color:var(--muted)}
+    .erow td{text-align:center;padding:36px;color:var(--muted);font-size:13px}
+    .lrow td{text-align:center;padding:28px;color:var(--muted)}
+    
+    /* Custom Badges */
+    .b{display:inline-block;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;font-family:var(--mono);white-space:nowrap}
+    .b-g{background:rgba(16,185,129,0.15);color:var(--accent2)}
+    .b-r{background:rgba(239,68,68,0.15);color:var(--danger)}
+    .b-y{background:rgba(245,158,11,0.15);color:var(--warn)}
+    .b-b{background:rgba(6,182,212,0.15);color:var(--accent)}
+    .b-gr{background:rgba(148,163,184,0.12);color:var(--muted)}
+    
+    /* Terminal logs component */
+    .logbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:13px;height:120px;overflow-y:auto;margin-top:14px;line-height:1.9}
+    .ll{display:block}.ll.ok{color:var(--accent2)}.ll.err{color:var(--danger)}.ll.info{color:var(--accent)}.ll.warn{color:var(--warn)}
+    
+    /* Modals & Overlays */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .overlay.open{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;width:580px;max-width:96vw;max-height:90vh;overflow-y:auto}
+    .modal h3{font-family:var(--mono);font-size:17px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+    .mfooter{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+    .frow{margin-bottom:14px}
+    .frow label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px}
+    .frow input,.frow select,.frow textarea{width:100%}
+    
+    /* Matcher Specific components */
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .notif{position:fixed;bottom:20px;right:20px;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.3s ease;max-width:360px}
+    .notif.show{transform:translateX(0)}
+    @media(max-width:800px){.split{grid-template-columns:1fr}.main{padding:12px}}
+  </style>
+</head>
+<body>
+<div class="notif" id="notif"></div>
+
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <span class="login-logo">🔑</span>
+    <h1>Azure Entra Matcher</h1>
+    <p>Select target apps and trace client values with prefix alignments across all registered vaults.</p>
+    <button class="btn-ms" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Sign in with Demo Account
+    </button>
+  </div>
+</div>
+
+<!-- Main Application Grid -->
+<div id="app" style="display:none">
+  <div class="header">
+    <a href="#" class="header-brand">🔒 Azure Entra Manager</a>
+    <div class="hdr-right">
+      <div class="user-pill"><div class="user-dot"></div><span id="userLabel">Demo Architect</span></div>
+      <button class="btn-sm" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Action controls header -->
+    <div class="sec-hdr">
+      <div class="sec-title">Entra App Registrations</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="openCreateApp()">+ Register App</button>
+        <button class="btn btn-p" onclick="loadApps()">↻ Refresh List</button>
+      </div>
+    </div>
+
+    <!-- Active Filters Section -->
+    <div class="ctrls">
+      <div class="cg"><span class="clabel">Search Query</span><input id="appSearch" placeholder="Name or App ID…" style="width:220px;" oninput="renderApps()"/></div>
+      <div class="cg">
+        <span class="clabel">Environment</span>
+        <select id="appEnvF" onchange="renderApps()">
+          <option value="">All Environments</option>
+          <option value="prod">Production</option>
+          <option value="preprod">Pre-Production</option>
+          <option value="uat">UAT</option>
+          <option value="test">Testing (QA)</option>
+          <option value="dev">Development</option>
+        </select>
+      </div>
+      <div class="cg">
+        <span class="clabel">Secret Status</span>
+        <select id="appSecF" onchange="renderApps()">
+          <option value="0">All Credentials</option>
+          <option value="1">With Secrets</option>
+          <option value="2">Without Secrets</option>
+          <option value="3">With Active Secrets</option>
+          <option value="4">With Expired Secrets</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Metrics Cards HUD -->
+    <div class="stats" id="appStats" style="margin-top: 15px;">
+      <div class="sc">
+        <div class="sc-n" id="as0">5</div>
+        <div class="sc-l">Total Apps</div>
+      </div>
+      <div class="sc">
+        <div class="sc-n" style="color:var(--accent2)" id="as1">3</div>
+        <div class="sc-l">Active Secrets</div>
+      </div>
+      <div class="sc">
+        <div class="sc-n" style="color:var(--danger)" id="as2">1</div>
+        <div class="sc-l">Expired Secrets</div>
+      </div>
+    </div>
+
+    <!-- Main List View Table -->
+    <div class="tbl-wrap" style="margin-top: 20px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Name / Subsystem ID</th>
+            <th>Active Client ID</th>
+            <th>Registered Date</th>
+            <th>Status Indicator</th>
+            <th>Interactive Match Action</th>
+          </tr>
+        </thead>
+        <tbody id="appTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- PREFIX INTEGRITY CHECK DETAILS / DYNAMIC WORKSPACE COMPONENT -->
+    <div id="prefixSection" style="margin-top:40px; display:none;" class="split">
+      <div class="tbl-wrap" style="padding: 24px; background:var(--surface);">
+        <h3 id="prefixHeader" style="margin-bottom:10px; font-weight:700;">Prefix Search Parameters</h3>
+        <p style="color:var(--muted); font-size:13px; line-height:1.6; margin-bottom:20px;">
+          Checking the first three characters of the selected app registration name, then scanning across all subscription key-values for matches.
+        </p>
+        <div style="background:var(--card); font-family:var(--mono); font-size:14px; padding:15px; border-radius:8px; border:1px solid var(--border);">
+          Target App Name: <strong id="targetAppName" style="color:var(--accent);">—</strong><br/>
+          Extracted 3-Char Key: <span class="b b-b" id="extractedPrefix" style="font-size:14px; margin-top:10px;">—</span>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" style="padding: 24px; background:var(--surface);">
+        <h3 style="margin-bottom:12px; font-weight:700;">Matched Key Vault Records</h3>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">
+          The first 3 characters match Key Vault resource endpoints below:
+        </p>
+        <div id="matcherResults" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Live Execution Streams Logs Component -->
+    <div class="logbox" id="logApps">
+      <span class="ll info">[ready] Active Cloud Run session authenticated</span>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts for Microsoft Auth Simulation & Matching Mechanics -->
+<script>
+  // Rich local mock dataset matching types.ts
+  const SAMPLE_APPS = [
+    { id: "1", displayName: "ais-web-portal", appId: "c287a9b4-f827-4a70-b2fe-4f6bf6668cc3", created: "2025-01-02", status: "Active" },
+    { id: "2", displayName: "tst-payment-api", appId: "8fab10d3-34b2-4d11-bba9-11029cdec283", created: "2025-03-01", status: "Active" },
+    { id: "3", displayName: "dev-analytics-dashboard", appId: "5fba2cda-ac12-4c2d-beef-10d93cfad2cb", created: "2025-04-10", status: "Expired" },
+    { id: "4", displayName: "corit-hr-system", appId: "01f9bc9a-b4ac-48dd-91af-39ac12df93ec", created: "2025-02-10", status: "Active" },
+    { id: "5", displayName: "umbraco-public-cms", appId: "9fabccd1-acde-490e-b9ef-f9bcdecde9a8", created: "2025-05-15", status: "No Secrets" }
+  ];
+
+  const SAMPLE_KEYVAULTS = [
+    { name: "ais-kv-prod", sub: "Pay-As-You-Go Prod", url: "https://ais-kv-prod.vault.azure.net" },
+    { name: "tst-kv-billing", sub: "Enterprise Dev & Test", url: "https://tst-kv-billing.vault.azure.net" },
+    { name: "dev-secrets-vault", sub: "Enterprise Dev & Test", url: "https://dev-secrets-vault.vault.azure.net" },
+    { name: "cor-kv-shared", sub: "Client Sandbox Sub", url: "https://cor-kv-shared.vault.azure.net" }
+  ];
+
+  function signIn() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderApps();
+    addLog("ok", "Security context verified. Dynamic lists synced.");
+  }
+
+  function signOut() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function addLog(type, msg) {
+    const box = document.getElementById('logApps');
+    const entry = document.createElement('span');
+    entry.className = `ll ${type}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function renderApps() {
+    const query = document.getElementById('appSearch').value.toLowerCase();
+    const env = document.getElementById('appEnvF').value;
+    const sec = document.getElementById('appSecF').value;
+    const body = document.getElementById('appTbody');
+    body.innerHTML = '';
+
+    const filtered = SAMPLE_APPS.filter(app => {
+      const name = app.displayName.toLowerCase();
+      if (query && !name.includes(query) && !app.appId.includes(query)) return false;
+      if (env && !name.includes(env)) return false;
+      if (sec === "1" && app.status === "No Secrets") return false;
+      if (sec === "2" && app.status !== "No Secrets") return false;
+      if (sec === "3" && app.status !== "Active") return false;
+      if (sec === "4" && app.status !== "Expired") return false;
+      return true;
+    });
+
+    filtered.forEach(app => {
+      let badge = `<span class="b b-g">Active</span>`;
+      if (app.status === "Expired") badge = `<span class="b b-r">Expired</span>`;
+      if (app.status === "No Secrets") badge = `<span class="b b-gr">No Secrets</span>`;
+
+      body.innerHTML += `
+        <tr>
+          <td><strong>${app.displayName}</strong></td>
+          <td class="mono">${app.appId}</td>
+          <td>${app.created}</td>
+          <td>${badge}</td>
+          <td>
+            <button class="btn btn-p" style="padding:4px 10px; font-size:12px;" onclick="runPrefixMatch('${app.displayName}')">
+              🔍 Match Vaults Prefix
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function runPrefixMatch(appName) {
+    const clean = appName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const prefix = clean.substring(0, 3);
+    
+    document.getElementById('prefixSection').style.display = 'grid';
+    document.getElementById('targetAppName').textContent = appName;
+    document.getElementById('extractedPrefix').textContent = `"${prefix}"`;
+
+    const resultsDiv = document.getElementById('matcherResults');
+    resultsDiv.innerHTML = '';
+
+    addLog("info", `Scanning subscriptions directory for vaults matching prefix: "${prefix}"`);
+
+    let matchCount = 0;
+    SAMPLE_KEYVAULTS.forEach(kv => {
+      const kvClean = kv.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      const kvPrefix = kvClean.substring(0, 3);
+      const isMatch = kvPrefix === prefix;
+
+      if (isMatch) matchCount++;
+
+      resultsDiv.innerHTML += `
+        <div style="background:var(--card); padding:12px 14px; border-radius:8px; border:1px solid ${isMatch ? 'var(--accent2)' : 'var(--border)'}; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:14px; display:block; color:${isMatch ? 'var(--accent2)' : 'var(--text)'};">${kv.name}</strong>
+            <span style="font-size:11px; color:var(--muted);">${kv.sub}</span>
+          </div>
+          <span>
+            ${isMatch ? '<span class="b b-g">PREFIX MATCH</span>' : '<span class="b b-gr">No Match</span>'}
+          </span>
+        </div>
+      `;
+    });
+
+    addLog("ok", `Completed Prefix Matcher search: Found ${matchCount} matching vault references.`);
+  }
+
+  function openCreateApp() {
+    addLog("info", "Opening registration Wizard modal");
+    alert("This action triggers the 'Create App' schema. Use the fully-featured React controller in the main workspace above to preview dynamic schema additions!");
+  }
+</script>
+</body>
+</html>
