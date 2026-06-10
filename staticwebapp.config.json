@@ -1,7 +1,7 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.zip", "*.exe", "*.docx", "*.xlsx", "*.pdf"]
+    "exclude": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.zip", "*.exe", "*.docx", "*.xlsx", "*.pdf", "*.html"]
   },
   "mimeTypes": {
     ".zip": "application/zip",
