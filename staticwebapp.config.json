@@ -1,7 +1,30 @@
 {
+  "routes": [
+    {
+      "route": "/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "redirect": "/.auth/login/aad",
+      "statusCode": 302
+    }
+  },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.zip", "*.exe", "*.docx", "*.xlsx", "*.pdf", "*.html"]
+    "exclude": [
+      "*.png",
+      "*.jpg",
+      "*.jpeg",
+      "*.gif",
+      "*.zip",
+      "*.exe",
+      "*.docx",
+      "*.xlsx",
+      "*.pdf",
+      "*.html"
+    ]
   },
   "mimeTypes": {
     ".zip": "application/zip",
