@@ -6,7 +6,7 @@
 <title>Azure Security and Compliance</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#f0f2f5;padding:1.5rem;color:#222}
+body{font-family:Arial,sans-serif;background:#f0f2f5;padding:0;color:#222}
 
 .section-bar{background:#1a3a5c;color:#fff;font-size:15px;font-weight:600;padding:9px 14px;border-radius:4px 4px 0 0;display:flex;align-items:center;gap:8px}
 .section-bar .dot{width:10px;height:10px;background:#e74c3c;border-radius:2px;flex-shrink:0}
@@ -17,7 +17,7 @@ body{font-family:Arial,sans-serif;background:#f0f2f5;padding:1.5rem;color:#222}
 .col-header{background:#2d6a1f;color:#fff;font-size:14px;font-weight:600;padding:7px 10px;border-radius:6px 6px 0 0;text-align:center;box-shadow:0 4px 0 #1a4012;cursor:pointer;user-select:none;position:relative;transition:border-radius .3s}
 .col-header::after{content:'▼';position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;opacity:.8;transition:transform .3s}
 .col-header.col-collapsed::after{transform:translateY(-50%) rotate(-90deg)}
-.col-header.col-collapsed{border-radius:6px !important}a
+.col-header.col-collapsed{border-radius:6px !important}
 .col-panel{background:#c8d0d8;border:1px solid #a0aab3;border-top:none;border-radius:0 0 6px 6px;padding:8px;flex:1;display:flex;flex-direction:column;gap:0}
 .col-panel.col-hidden{display:none}
 /* status tags must always be readable once set */
@@ -97,6 +97,22 @@ code.block{display:block;background:#16202e;color:#9cdcfe;padding:14px 16px;bord
 </style>
 </head>
 <body>
+<script>
+var BASE=window.location.origin+'/Azure-Governance/';
+var ROOT=window.location.origin+'/';
+function goSection(p){window.location.href=BASE+p;}
+function goRoot(){window.location.href=ROOT+'index.html';}
+function goGov(){window.location.href=BASE+'gov-index.html';}
+</script>
+
+<div style="background:#fff;border-bottom:1px solid #dde3ea;padding:10px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+  <button onclick="goGov()" style="font-size:13px;font-weight:700;color:#1a3a5c;border:none;background:none;cursor:pointer;margin-right:4px;padding:0">⚡ Azure Governance</button>
+  <button onclick="goSection('gov-cost.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">💰 Cost Management</button>
+  <button onclick="goSection('gov-security.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;">🔒 Security &amp; Compliance</button>
+  <button onclick="goSection('gov-architecture.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🏗 Architecture</button>
+  <button onclick="goSection('gov-shared.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🔧 Shared Services</button>
+  <button onclick="goRoot()" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#1a3a5c;border:1px solid #1a3a5c;background:#f0f4f8;cursor:pointer;margin-left:auto">← Main Portal</button>
+</div>
 
 <div style="background:#f0f2f5;padding:16px 20px 0">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
