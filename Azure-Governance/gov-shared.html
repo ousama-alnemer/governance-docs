@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Centralized Shared Services</title>
+<title>Cost Management</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f0f2f5;padding:1.5rem;color:#222}
 .section-bar{background:#1a3a5c;color:#fff;font-size:15px;font-weight:600;padding:9px 14px;border-radius:4px 4px 0 0;display:flex;align-items:center;gap:8px}
 .section-bar .dot{width:10px;height:10px;background:#e74c3c;border-radius:2px;flex-shrink:0}
-.outer-panel{background:#dce3ea;border:1px solid #b0b8c1;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:3rem}
+.outer-panel{background:#dce3ea;border:1px solid #b0b8c1;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:2.5rem}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .col-wrap{display:flex;flex-direction:column}
 .col-header{background:#2d6a1f;color:#fff;font-size:14px;font-weight:600;padding:7px 10px;border-radius:6px 6px 0 0;text-align:center;box-shadow:0 4px 0 #1a4012,0 5px 10px rgba(0,0,0,.2);position:relative;z-index:1;cursor:pointer;user-select:none;transition:border-radius .3s}
@@ -32,6 +32,7 @@ body{font-family:Arial,sans-serif;background:#f0f2f5;padding:1.5rem;color:#222}
 .btn-label-text{display:block;flex:1;min-width:0;font-size:13px;font-weight:700;color:#1a3a5c}
 .btn-inline-solution{display:inline-flex;align-items:center;gap:4px;background:#f3ecfb;color:#6c3483;border:1px solid #d7c3ee;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .btn-inline-solution:hover{background:#eadcf8}
+/* ── Status row ── */
 .status-row{display:flex;align-items:center;gap:6px;padding:5px 10px 6px;background:#a8c4e0;border:1px solid #7aafd4;border-top:1px dashed #7aafd4;border-radius:0 0 6px 6px;width:100%;box-sizing:border-box;margin-bottom:6px}
 .status-select{flex:1;font-size:10px;font-family:Arial,sans-serif;border:1px solid #7aafd4;border-radius:4px;padding:3px 6px;background:#fff;color:#1a3a5c;cursor:pointer;outline:none;min-width:0}
 .status-save{font-size:10px;font-weight:700;font-family:Arial,sans-serif;background:#1a3a5c;color:#fff;border:1px solid #0f2644;border-radius:4px;padding:4px 10px;cursor:pointer;white-space:nowrap;flex:0 0 auto;user-select:none}
@@ -41,9 +42,28 @@ body{font-family:Arial,sans-serif;background:#f0f2f5;padding:1.5rem;color:#222}
 .st-discuss{background:#fff3cd;color:#7a4a00;border-color:#f2d18a}
 .st-defer{background:#e8f0fe;color:#1a3a5c;border-color:#b8cfe8}
 .st-disagree{background:#fde8e8;color:#7b1d1d;border-color:#f0c2c2}
+/* ── Explanation ── */
 .explanation{display:block;max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s ease,opacity .3s ease;padding:0 12px;opacity:0;background:#fff;border:0px solid #7aafd4;border-left:3px solid #1a5276;border-radius:4px;font-size:13px;color:#222;line-height:1.65;margin-bottom:0}
-.explanation.show{max-height:600px;padding:10px 12px;opacity:1;border:1px solid #7aafd4;border-left:3px solid #1a5276;margin-bottom:6px}
+.explanation.show{max-height:800px;padding:10px 12px;opacity:1;border:1px solid #7aafd4;border-left:3px solid #1a5276;margin-bottom:6px}
 .explanation strong{font-weight:600;color:#1a4971}
+code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:11px;font-family:'Courier New',monospace}
+/* ── Impact ── */
+.impact-block{border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid #b0b8c1}
+.impact-header{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.impact-header .effect-pill{border-radius:3px;padding:2px 8px;font-size:11px;font-weight:800;white-space:nowrap}
+.eff-deny  .impact-header{background:#fde8e8;color:#7b1d1d} .eff-deny  .effect-pill{background:#c0392b;color:#fff}
+.eff-audit .impact-header{background:#e8f0fe;color:#1a3a5c} .eff-audit .effect-pill{background:#2471a3;color:#fff}
+.eff-mod   .impact-header{background:#d4edda;color:#1a4012} .eff-mod   .effect-pill{background:#1a7a4a;color:#fff}
+.eff-dine  .impact-header{background:#ede0f7;color:#4a1a6e} .eff-dine  .effect-pill{background:#6c3483;color:#fff}
+.impact-rows{background:#fafafa;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.impact-cell{background:#fff;border-radius:5px;padding:7px 9px;border:1px solid #dde3ea;font-size:12.5px;line-height:1.55}
+.impact-cell .ic-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.ic-new  .ic-label{color:#1a7a4a}
+.ic-exist .ic-label{color:#b45309}
+.ic-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ic-new  .ic-dot{background:#1a7a4a}
+.ic-exist .ic-dot{background:#e67e22}
+/* ── Popup ── */
 #ctx-overlay{position:fixed;inset:0;z-index:99998;display:none;background:rgba(0,0,0,.35)}
 #ctx-popup{position:fixed;z-index:99999;display:none;flex-direction:column;width:min(780px,95vw);max-height:80vh;background:#f8f9fc;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden;font-size:13px;top:10vh;left:50%;transform:translateX(-50%)}
 #ctx-popup-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;font-weight:700;font-size:14px;color:#fff;border-bottom:1px solid rgba(255,255,255,.15)}
@@ -63,199 +83,329 @@ code.block{display:block;background:#16202e;color:#9cdcfe;padding:14px 16px;bord
 @media(max-width:560px){.grid-3{grid-template-columns:1fr}}
 </style>
 <script>
-var BASE = window.location.origin + '/Azure-Governance/';
-var ROOT = window.location.origin + '/';
-function goSection(p){ window.location.href = BASE + p; }
-function goRoot(){ window.location.href = ROOT + 'index.html'; }
-function goGov(){ window.location.href = BASE + 'gov-index.html'; }
+var BASE=window.location.origin+'/Azure-Governance/';
+var ROOT=window.location.origin+'/';
+function goSection(p){window.location.href=BASE+p;}
+function goRoot(){window.location.href=ROOT+'index.html';}
+function goGov(){window.location.href=BASE+'gov-index.html';}
 </script>
 </head>
 <body>
 
 <div style="background:#fff;border-bottom:1px solid #dde3ea;padding:10px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.06)">
   <button onclick="goGov()" style="font-size:13px;font-weight:700;color:#1a3a5c;border:none;background:none;cursor:pointer;margin-right:4px;padding:0">⚡ Azure Governance</button>
-  <button onclick="goSection('gov-cost.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">💰 Cost Management</button>
+  <button onclick="goSection('gov-cost.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;">💰 Cost Management</button>
   <button onclick="goSection('gov-security.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🔒 Security &amp; Compliance</button>
   <button onclick="goSection('gov-architecture.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🏗 Architecture</button>
-  <button onclick="goSection('gov-shared.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#1a3a5c;color:#fff;border:1px solid #1a3a5c;">🔧 Shared Services</button>
+  <button onclick="goSection('gov-shared.html')" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;border:1px solid #d0d4db;">🔧 Shared Services</button>
   <button onclick="goRoot()" style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#1a3a5c;border:1px solid #1a3a5c;background:#f0f4f8;cursor:pointer;margin-left:auto">← Main Portal</button>
 </div>
 
 <div style="background:#f0f2f5;padding:16px 20px 0">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-    <span style="font-size:22px">🔧</span>
-    <h1 style="font-size:19px;font-weight:700;color:#1a3a5c;font-family:Arial,sans-serif">Centralized Shared Services</h1>
+    <span style="font-size:22px">💰</span>
+    <h1 style="font-size:19px;font-weight:700;color:#1a3a5c;font-family:Arial,sans-serif">Cost Management</h1>
   </div>
 </div>
 
 <div style="padding:0 20px 20px;background:#f0f2f5;min-height:100vh">
 
-<div class="section-bar" style="margin-top:2rem;cursor:pointer;user-select:none" onclick="toggleCentralSummary(this)">
-  <span class="dot"></span>Centralized Shared Services by Subscription
-  <span style="margin-left:auto;font-size:11px;opacity:.8" id="central-summary-arrow">▼ show principle</span>
-</div>
-<div id="central-summary-box" style="display:none;background:#fff;border:1px solid #b0b8c1;border-top:none;padding:12px 14px;font-size:13px;line-height:1.7;color:#333">
-  <strong style="color:#1a3a5c">Centralization principle:</strong><br>
-  ✅ Centralize platform, networking, monitoring, and shared security operations services<br>
-  ✅ Share only where governance, ownership, and scale justify it<br>
-  ❌ Keep workload-specific business data, application databases, and application secrets inside the owning workload subscription
-</div>
-
+<!-- ═══════════════════════════════════ -->
+<!-- SECTION 1: TAG GOVERNANCE          -->
+<!-- ═══════════════════════════════════ -->
+<div class="section-bar" style="margin-top:2rem"><span class="dot"></span>Tag Governance</div>
 <div class="outer-panel">
 <div class="grid-3">
 
-<!-- ══ COLUMN 1: PLATFORM / CORE SHARED ══ -->
+<!-- Tag Model -->
 <div class="col-wrap">
-<div class="col-header col-collapsed" onclick="toggleCol(this)">Platform / Core Shared</div>
+<div class="col-header col-collapsed" onclick="toggleCol(this)">Standard Tag Model</div>
 <div class="col-panel col-hidden">
 
-  <button class="btn" data-key="central-hubvnet" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Connectivity Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Hub VNet / Shared Connectivity</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-hubvnet',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="tag-model" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#1a5276;background:#e8f0fe;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Via Policy (Audit)</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Standard Tag Model</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('tag-model',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-hubvnet" onchange="previewStatus('central-hubvnet')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-hubvnet')">Save</span>
-    <span class="status-tag" id="tag-central-hubvnet"></span>
+    <select class="status-select" id="sel-tag-model" onchange="previewStatus('tag-model')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('tag-model')">Save</span>
+    <span class="status-tag" id="tag-tag-model"></span>
   </div>
-  <div class="explanation" id="exp-central-hubvnet"><strong>Centralize in:</strong> Connectivity or Management subscription<br><br><strong>Why:</strong> Shared routing, VNet peering, DNS forwarding, and hybrid connectivity should be managed once and consumed by all landing zones.</div>
+  <div class="explanation" id="exp-tag-model">
+    <strong>What it does:</strong> Defines the standard tag schema across all subscriptions via a Policy Initiative.<br><br>
+    <strong>Required tags:</strong><br>
+    🏷️ <code>Environment</code> — prod / uat / dev / test<br>
+    🏷️ <code>Owner</code> — team email<br>
+    🏷️ <code>CostCenter</code> — billing code<br>
+    🏷️ <code>Project</code> — project name<br>
+    🏷️ <code>AutoShutdown</code> — true / false
+  </div>
 
-  <button class="btn" data-key="central-firewall" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Connectivity Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Azure Firewall</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-firewall',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="tag-require" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#7b1d1d;background:#fde8e8;border-radius:3px;padding:1px 6px;letter-spacing:.3px">🚫 Via Policy (Deny)</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Require Mandatory Tags</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('tag-require',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-firewall" onchange="previewStatus('central-firewall')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-firewall')">Save</span>
-    <span class="status-tag" id="tag-central-firewall"></span>
+    <select class="status-select" id="sel-tag-require" onchange="previewStatus('tag-require')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('tag-require')">Save</span>
+    <span class="status-tag" id="tag-tag-require"></span>
   </div>
-  <div class="explanation" id="exp-central-firewall"><strong>Centralize in:</strong> Connectivity subscription<br><br><strong>Why:</strong> Central inspection, routing control, and egress governance across multiple workload subscriptions.</div>
+  <div class="explanation" id="exp-tag-require">
+    <strong>What it does:</strong> Blocks creation of Resource Groups unless <code>Environment</code>, <code>Owner</code>, and <code>CostCenter</code> tags are present.<br><br>
+    🚫 RG creation fails without the 3 mandatory tags<br>
+    ✅ Applies at subscription scope — catches every team
+    <div class="impact-block eff-deny">
+      <div class="impact-header"><span class="effect-pill">DENY</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New Resource Groups</div>❌ Blocked immediately if mandatory tags are missing.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing Resource Groups</div>⚠️ Flagged Non-Compliant in dashboard — not deleted, but must be tagged before next change.</div>
+      </div>
+    </div>
+  </div>
 
-  <button class="btn" data-key="central-bastion" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Connectivity Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Azure Bastion</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-bastion',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="tag-values" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#7b1d1d;background:#fde8e8;border-radius:3px;padding:1px 6px;letter-spacing:.3px">🚫 Via Policy (Deny)</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Allowed Tag Values</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('tag-values',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-bastion" onchange="previewStatus('central-bastion')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-bastion')">Save</span>
-    <span class="status-tag" id="tag-central-bastion"></span>
+    <select class="status-select" id="sel-tag-values" onchange="previewStatus('tag-values')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('tag-values')">Save</span>
+    <span class="status-tag" id="tag-tag-values"></span>
   </div>
-  <div class="explanation" id="exp-central-bastion"><strong>Centralize in:</strong> Connectivity subscription<br><br><strong>Why:</strong> Secure administrative access can be offered from the shared hub architecture instead of deploying Bastion in every workload subscription.</div>
+  <div class="explanation" id="exp-tag-values">
+    <strong>What it does:</strong> Enforces allowed values for the <code>Environment</code> tag. Free-text values are blocked.<br><br>
+    ✅ Allowed: <code>prod</code> | <code>uat</code> | <code>dev</code> | <code>test</code><br>
+    🚫 Blocked: <code>production</code>, <code>PROD</code>, <code>staging</code>, <code>sandbox123</code>
+    <div class="impact-block eff-deny">
+      <div class="impact-header"><span class="effect-pill">DENY</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New Resources</div>❌ Blocked if Environment tag value is not in the approved list.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing Resources</div>⚠️ Flagged Non-Compliant — update the tag value to an approved token.</div>
+      </div>
+    </div>
+  </div>
 
-  <button class="btn" data-key="central-dns" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Connectivity Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Private DNS Zones</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-dns',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="tag-inherit" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#1a7a4a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Via Policy (Modify)</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Auto-Inherit Tags from RG</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('tag-inherit',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-dns" onchange="previewStatus('central-dns')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-dns')">Save</span>
-    <span class="status-tag" id="tag-central-dns"></span>
+    <select class="status-select" id="sel-tag-inherit" onchange="previewStatus('tag-inherit')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('tag-inherit')">Save</span>
+    <span class="status-tag" id="tag-tag-inherit"></span>
   </div>
-  <div class="explanation" id="exp-central-dns"><strong>Centralize in:</strong> Connectivity or Management subscription<br><br><strong>Why:</strong> Shared Private Endpoint name resolution should be governed centrally for all spoke subscriptions.</div>
+  <div class="explanation" id="exp-tag-inherit">
+    <strong>What it does:</strong> Automatically copies <code>Environment</code>, <code>Owner</code>, and <code>CostCenter</code> tags from the Resource Group to every child resource.<br><br>
+    ✅ No manual tagging required on individual resources<br>
+    ✅ Tags flow down automatically at creation<br>
+    ✅ Existing resources fixed via Remediation Task
+    <div class="impact-block eff-mod">
+      <div class="impact-header"><span class="effect-pill">MODIFY</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New Resources</div>✅ Tags inherited automatically from the Resource Group at creation.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing Resources</div>⚠️ NOT auto-fixed. Run a <strong>Remediation Task</strong> to backfill tags on existing resources.</div>
+      </div>
+    </div>
+  </div>
 
 </div>
 </div>
 
-<!-- ══ COLUMN 2: SECURITY / OPERATIONS SHARED ══ -->
+<!-- Cost Governance -->
 <div class="col-wrap">
-<div class="col-header col-collapsed" onclick="toggleCol(this)">Security / Operations Shared</div>
+<div class="col-header col-collapsed" onclick="toggleCol(this)">Cost Governance</div>
 <div class="col-panel col-hidden">
 
-  <button class="btn" data-key="central-law" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Management Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Log Analytics Workspace</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-law',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="cg1" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#7f8c8d;background:#f0f0f0;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Manual / RBAC</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Assign IT-Ops &amp; Business Owners</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('cg1',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-law" onchange="previewStatus('central-law')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-law')">Save</span>
-    <span class="status-tag" id="tag-central-law"></span>
+    <select class="status-select" id="sel-cg1" onchange="previewStatus('cg1')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('cg1')">Save</span>
+    <span class="status-tag" id="tag-cg1"></span>
   </div>
-  <div class="explanation" id="exp-central-law"><strong>Centralize in:</strong> Management subscription<br><br><strong>Why:</strong> Central monitoring, diagnostics, compliance logs, and cross-subscription visibility.</div>
+  <div class="explanation" id="exp-cg1">
+    <strong>What it does:</strong> Assigns the IT-Ops group as <strong>Contributor</strong> and the Business Owner group as <strong>Reader</strong> at subscription scope.<br><br>
+    ✅ IT-Ops: Contributor — can deploy and manage resources<br>
+    ✅ Business Owner: Reader — can view costs and resources<br>
+    ✅ All assignments via AAD groups — no direct user assignment
+  </div>
 
-  <button class="btn" data-key="central-sentinel" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Management Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Microsoft Sentinel</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-sentinel',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="cg2" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#7b1d1d;background:#fde8e8;border-radius:3px;padding:1px 6px;letter-spacing:.3px">🚫 Via Policy (Deny)</span></div><div class="btn-top-right"><span class="btn-time">🕑 1 day</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">High-Cost Resource Governance</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('cg2',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-sentinel" onchange="previewStatus('central-sentinel')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-sentinel')">Save</span>
-    <span class="status-tag" id="tag-central-sentinel"></span>
+    <select class="status-select" id="sel-cg2" onchange="previewStatus('cg2')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('cg2')">Save</span>
+    <span class="status-tag" id="tag-cg2"></span>
   </div>
-  <div class="explanation" id="exp-central-sentinel"><strong>Centralize in:</strong> Management / Security subscription<br><br><strong>Why:</strong> A shared SIEM should aggregate alerts and logs from all subscriptions into one security operations model.</div>
+  <div class="explanation" id="exp-cg2">
+    <strong>What it does:</strong> Blocks high-cost VM SKUs (M-series, GS5, L80s) unless a Policy Exemption with Business Owner approval is in place.<br><br>
+    🚫 Blocked: <code>Standard_M128s</code>, <code>Standard_M64ms</code>, <code>Standard_GS5</code><br>
+    ✅ To use: request a Policy Exemption approved by Business Owner
+    <div class="impact-block eff-deny">
+      <div class="impact-header"><span class="effect-pill">DENY</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New VMs</div>❌ Blocked immediately if using a blocked SKU without an exemption.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing VMs</div>⚠️ Flagged Non-Compliant. Not stopped — but must be resized or exempted.</div>
+      </div>
+    </div>
+  </div>
 
-  <button class="btn" data-key="central-monitor" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Management Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Azure Monitor Action Groups / Alerts</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-monitor',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="cg3" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge mandatory">Mandatory</span><span style="font-size:11px;font-weight:700;color:#1a5276;background:#e8f0fe;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Bicep / Budget API</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Monthly Budget Threshold</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('cg3',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-monitor" onchange="previewStatus('central-monitor')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-monitor')">Save</span>
-    <span class="status-tag" id="tag-central-monitor"></span>
+    <select class="status-select" id="sel-cg3" onchange="previewStatus('cg3')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('cg3')">Save</span>
+    <span class="status-tag" id="tag-cg3"></span>
   </div>
-  <div class="explanation" id="exp-central-monitor"><strong>Centralize in:</strong> Management subscription<br><br><strong>Why:</strong> Shared operations notifications, Teams/email integration, and standard alert routing.</div>
-
-  <button class="btn" data-key="central-automation" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Centralized</span></div><div class="btn-top-right"><span class="btn-time">🏗 Management Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Automation Account / Runbooks</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-automation',event)">📋 View Bicep Solution</span></div>
-  </button>
-  <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-automation" onchange="previewStatus('central-automation')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-automation')">Save</span>
-    <span class="status-tag" id="tag-central-automation"></span>
+  <div class="explanation" id="exp-cg3">
+    <strong>What it does:</strong> Creates a monthly budget at subscription scope with email alerts at 80% and 100% thresholds.<br><br>
+    📧 Alert at 80% → IT-Ops + Business Owner notified<br>
+    📧 Alert at 100% → IT-Ops + Business Owner notified<br>
+    ℹ️ Budget does not block spending — it triggers notifications only
   </div>
-  <div class="explanation" id="exp-central-automation"><strong>Centralize in:</strong> Management subscription<br><br><strong>Why:</strong> Operational runbooks such as VM start/stop, remediation, reporting, and maintenance can be reused across subscriptions.</div>
 
 </div>
 </div>
 
-<!-- ══ COLUMN 3: WORKLOAD / OPTIONAL SHARED ══ -->
+<!-- Cost Optimisation -->
 <div class="col-wrap">
-<div class="col-header col-collapsed" onclick="toggleCol(this)">Workload / Optional Shared</div>
+<div class="col-header col-collapsed" onclick="toggleCol(this)">Cost Optimisation</div>
 <div class="col-panel col-hidden">
 
-  <button class="btn" data-key="central-apim" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#7a4a00;background:#fff3cd;border-radius:3px;padding:1px 6px;letter-spacing:.3px">● Optional Shared</span></div><div class="btn-top-right"><span class="btn-time">🏗 Shared Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">API Management</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-apim',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="co-startstop" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Automation Runbook</span></div><div class="btn-top-right"><span class="btn-time">🕑 1 day</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Auto Start/Stop VMs (07:00–19:00)</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co-startstop',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-apim" onchange="previewStatus('central-apim')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-apim')">Save</span>
-    <span class="status-tag" id="tag-central-apim"></span>
+    <select class="status-select" id="sel-co-startstop" onchange="previewStatus('co-startstop')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co-startstop')">Save</span>
+    <span class="status-tag" id="tag-co-startstop"></span>
   </div>
-  <div class="explanation" id="exp-central-apim"><strong>Centralize when:</strong> Multiple teams publish APIs through one common gateway.<br><br><strong>Keep local when:</strong> API lifecycle, security boundary, or ownership is application-specific.</div>
+  <div class="explanation" id="exp-co-startstop">
+    <strong>What it does:</strong> Deploys Azure Automation runbooks and schedules to automatically start/stop VMs tagged <code>AutoShutdown=true</code>.<br><br>
+    ▶️ Start: Monday–Friday at <strong>07:00</strong> (Europe/Copenhagen)<br>
+    ⏹️ Stop: Monday–Friday at <strong>19:00</strong><br>
+    💰 Saves ~60% compute cost on dev/test VMs
+  </div>
 
-  <button class="btn" data-key="central-asp" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#7a4a00;background:#fff3cd;border-radius:3px;padding:1px 6px;letter-spacing:.3px">● Optional Shared</span></div><div class="btn-top-right"><span class="btn-time">🏗 Shared Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Shared App Service Plans (Non-Prod)</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-asp',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="co2" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✓ Via Policy (DeployIfNotExists)</span></div><div class="btn-top-right"><span class="btn-time">🕑 1 day</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Storage Lifecycle Policy</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co2',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-asp" onchange="previewStatus('central-asp')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-asp')">Save</span>
-    <span class="status-tag" id="tag-central-asp"></span>
+    <select class="status-select" id="sel-co2" onchange="previewStatus('co2')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co2')">Save</span>
+    <span class="status-tag" id="tag-co2"></span>
   </div>
-  <div class="explanation" id="exp-central-asp"><strong>Centralize when:</strong> Dev/Test workloads are low risk and can share compute for cost optimization.<br><br><strong>Do not centralize:</strong> Production plans that require strict isolation.</div>
+  <div class="explanation" id="exp-co2">
+    <strong>What it does:</strong> Automatically attaches a lifecycle management policy to every Storage Account.<br><br>
+    📦 After 30 days → move to <strong>Cool</strong> tier<br>
+    📦 After 365 days → move to <strong>Archive</strong> tier<br>
+    🗑️ After 7 years → delete automatically
+    <div class="impact-block eff-dine">
+      <div class="impact-header"><span class="effect-pill">DeployIfNotExists</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New Storage Accounts</div>✅ Lifecycle policy attached automatically within ~15 minutes.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing Storage Accounts</div>⚠️ NOT auto-fixed. Run a <strong>Remediation Task</strong>.</div>
+      </div>
+    </div>
+  </div>
 
-  <button class="btn" data-key="central-rsv" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#7a4a00;background:#fff3cd;border-radius:3px;padding:1px 6px;letter-spacing:.3px">● Optional Shared</span></div><div class="btn-top-right"><span class="btn-time">🏗 Shared Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">Recovery Services Vault</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-rsv',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="co3" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#1a5276;background:#e8f0fe;border-radius:3px;padding:1px 6px;letter-spacing:.3px">🔍 Via Policy (Audit)</span></div><div class="btn-top-right"><span class="btn-time">🕑 4 hours</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Resize Oversized VMs</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co3',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-rsv" onchange="previewStatus('central-rsv')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-rsv')">Save</span>
-    <span class="status-tag" id="tag-central-rsv"></span>
+    <select class="status-select" id="sel-co3" onchange="previewStatus('co3')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co3')">Save</span>
+    <span class="status-tag" id="tag-co3"></span>
   </div>
-  <div class="explanation" id="exp-central-rsv"><strong>Centralize when:</strong> Backup governance and retention are managed centrally.<br><br><strong>Keep local when:</strong> Regulatory, ownership, or blast-radius requirements require workload isolation.</div>
+  <div class="explanation" id="exp-co3">
+    <strong>What it does:</strong> Flags VMs with 16+ vCPUs in dev/test environments as Non-Compliant — surfaces them for right-sizing review in Defender for Cloud.<br><br>
+    🔍 Flagged: D16s_v5, D32s_v5, D64s_v5, E16s_v5, E32s_v5 in dev/test/uat<br>
+    ℹ️ Not blocked — review and resize or justify manually
+    <div class="impact-block eff-audit">
+      <div class="impact-header"><span class="effect-pill">AUDIT</span> How this policy affects your resources</div>
+      <div class="impact-rows">
+        <div class="impact-cell ic-new"><div class="ic-label"><span class="ic-dot"></span>New Oversized VMs</div>⚠️ Flagged immediately in compliance dashboard. Not blocked.</div>
+        <div class="impact-cell ic-exist"><div class="ic-label"><span class="ic-dot"></span>Existing Oversized VMs</div>⚠️ All surfaced in Defender for Cloud recommendations on next scan.</div>
+      </div>
+    </div>
+  </div>
 
-  <button class="btn" data-key="central-kv" onclick="toggle(this)">
-    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="display:inline-block;font-size:11px;font-weight:700;color:#7b1d1d;background:#fde8e8;border-radius:3px;padding:1px 6px;letter-spacing:.3px">✖ Keep in Workload Sub</span></div><div class="btn-top-right"><span class="btn-time">🏗 Workload Sub</span></div></div>
-    <div class="btn-label"><span class="btn-label-text">App Key Vaults / Databases / App Data</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('central-kv',event)">📋 View Bicep Solution</span></div>
+  <button class="btn" data-key="co4" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Bicep / Autoscale</span></div><div class="btn-top-right"><span class="btn-time">🕑 1 day</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Auto-Scale Non-Prod Workloads</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co4',event)">📋 View Bicep Solution</span></div>
   </button>
   <div class="status-row" onclick="event.stopPropagation()">
-    <select class="status-select" id="sel-central-kv" onchange="previewStatus('central-kv')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
-    <span class="status-save" onclick="saveStatus('central-kv')">Save</span>
-    <span class="status-tag" id="tag-central-kv"></span>
+    <select class="status-select" id="sel-co4" onchange="previewStatus('co4')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co4')">Save</span>
+    <span class="status-tag" id="tag-co4"></span>
   </div>
-  <div class="explanation" id="exp-central-kv"><strong>Recommendation:</strong> Keep workload-specific secrets, application databases, and business data inside the owning workload subscription.<br><br><strong>Why:</strong> Strong ownership, least privilege, blast-radius reduction, and application isolation.</div>
+  <div class="explanation" id="exp-co4">
+    <strong>What it does:</strong> Deploys autoscale rules on non-prod App Service Plans — scales down to 1 instance outside hours, up to 3 during peak.<br><br>
+    ⬇️ Scale in to 1 instance at 19:00<br>
+    ⬆️ Scale out up to 3 when CPU &gt;70%<br>
+    💰 Reduces baseline non-prod compute cost by ~60%
+  </div>
+
+  <button class="btn" data-key="co5" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#1a5c2a;background:#d4edda;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Automation Runbook</span></div><div class="btn-top-right"><span class="btn-time">🕑 1 day</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Cleanup Orphaned Resources</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co5',event)">📋 View Bicep Solution</span></div>
+  </button>
+  <div class="status-row" onclick="event.stopPropagation()">
+    <select class="status-select" id="sel-co5" onchange="previewStatus('co5')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co5')">Save</span>
+    <span class="status-tag" id="tag-co5"></span>
+  </div>
+  <div class="explanation" id="exp-co5">
+    <strong>What it does:</strong> Deploys an Automation Runbook that scans for and reports orphaned resources weekly.<br><br>
+    🗑️ Unattached managed disks<br>
+    🗑️ Unused public IP addresses<br>
+    🗑️ Empty NICs (no VM attached)<br>
+    🗑️ Idle App Service Plans (0 apps)
+  </div>
+
+  <button class="btn" data-key="co6" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#7f8c8d;background:#f0f0f0;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Portal / EA Purchase</span></div><div class="btn-top-right"><span class="btn-time">🕑 Ongoing</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Reserved Instances</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co6',event)">📋 View Bicep Solution</span></div>
+  </button>
+  <div class="status-row" onclick="event.stopPropagation()">
+    <select class="status-select" id="sel-co6" onchange="previewStatus('co6')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co6')">Save</span>
+    <span class="status-tag" id="tag-co6"></span>
+  </div>
+  <div class="explanation" id="exp-co6">
+    <strong>What it does:</strong> Documents the Reserved Instance purchasing strategy — purchased via Azure Portal or EA billing portal, not via Bicep.<br><br>
+    💰 VMs: 1-year RI → up to <strong>40%</strong> saving vs PAYG<br>
+    💰 App Service Plans: 1-year → ~<strong>35%</strong> saving<br>
+    💰 Azure SQL: 1-year → ~<strong>33%</strong> saving<br>
+    ⚠️ Only reserve stable, always-on production workloads
+  </div>
+
+  <button class="btn" data-key="co7" onclick="toggle(this)">
+    <div class="btn-row"><div class="btn-meta"><span class="policy-badge recommended">Recommended</span><span style="font-size:11px;font-weight:700;color:#7f8c8d;background:#f0f0f0;border-radius:3px;padding:1px 6px;letter-spacing:.3px">⚙ Azure Advisor</span></div><div class="btn-top-right"><span class="btn-time">🕑 Ongoing</span></div></div>
+    <div class="btn-label"><span class="btn-label-text">Azure Advisor Recommendations</span><span class="btn-inline-solution" onclick="event.stopPropagation();showPopup('co7',event)">📋 View Bicep Solution</span></div>
+  </button>
+  <div class="status-row" onclick="event.stopPropagation()">
+    <select class="status-select" id="sel-co7" onchange="previewStatus('co7')"><option value="">— Set status —</option><option value="agree">✅ Agree totally</option><option value="discuss">💬 Need more discussion</option><option value="defer">⏳ Defer — revisit later</option><option value="disagree">❌ Disagree</option></select>
+    <span class="status-save" onclick="saveStatus('co7')">Save</span>
+    <span class="status-tag" id="tag-co7"></span>
+  </div>
+  <div class="explanation" id="exp-co7">
+    <strong>What it does:</strong> Azure Advisor continuously surfaces actionable cost recommendations — review monthly.<br><br>
+    1️⃣ Open Azure Advisor → Cost tab monthly<br>
+    2️⃣ Act on right-size VM recommendations<br>
+    3️⃣ Delete unattached disks and unused PIPs<br>
+    4️⃣ Review Reserved Instance purchase recommendations<br>
+    5️⃣ Export to Log Analytics for audit trail
+  </div>
 
 </div>
 </div>
@@ -273,31 +423,21 @@ function goGov(){ window.location.href = BASE + 'gov-index.html'; }
 </div><!-- /page -->
 
 <script>
-function toggleCol(h){ h.classList.toggle('col-collapsed'); var p=h.nextElementSibling; if(p) p.classList.toggle('col-hidden'); }
+function toggleCol(h){h.classList.toggle('col-collapsed');var p=h.nextElementSibling;if(p)p.classList.toggle('col-hidden');}
 function toggle(btn){
-  var key=btn.dataset.key, exp=document.getElementById('exp-'+key), active=btn.classList.contains('active');
-  document.querySelectorAll('.explanation.show').forEach(function(el){
-    if(el!==exp){ el.classList.remove('show'); var k=el.id.replace('exp-',''), b=document.querySelector('[data-key="'+k+'"]'); if(b) b.classList.remove('active'); }
-  });
-  btn.classList.toggle('active',!active);
-  if(exp) exp.classList.toggle('show',!active);
-}
-function toggleCentralSummary(bar){
-  var box=document.getElementById('central-summary-box'), arrow=document.getElementById('central-summary-arrow'), v=box.style.display!=='none';
-  box.style.display=v?'none':'block'; arrow.textContent=v?'▼ show principle':'▲ hide principle';
+  var key=btn.dataset.key,exp=document.getElementById('exp-'+key),active=btn.classList.contains('active');
+  document.querySelectorAll('.explanation.show').forEach(function(el){if(el!==exp){el.classList.remove('show');var k=el.id.replace('exp-',''),b=document.querySelector('[data-key="'+k+'"]');if(b)b.classList.remove('active');}});
+  btn.classList.toggle('active',!active);if(exp)exp.classList.toggle('show',!active);
 }
 
 var STATUS_META={agree:{cls:'st-agree',text:'✅ Agreed'},discuss:{cls:'st-discuss',text:'💬 Needs discussion'},defer:{cls:'st-defer',text:'⏳ Deferred'},disagree:{cls:'st-disagree',text:'❌ Disagreed'}};
-var ALL_KEYS=['central-hubvnet','central-firewall','central-bastion','central-dns','central-law','central-sentinel','central-monitor','central-automation','central-apim','central-asp','central-rsv','central-kv'];
+var ALL_KEYS=['tag-model','tag-require','tag-values','tag-inherit','cg1','cg2','cg3','co-startstop','co2','co3','co4','co5','co6','co7'];
 
 function previewStatus(key){}
-function applyTag(tag,val){
-  if(val&&STATUS_META[val]){tag.className='status-tag '+STATUS_META[val].cls;tag.textContent=STATUS_META[val].text;tag.style.display='inline-block';}
-  else{tag.className='status-tag';tag.textContent='';tag.style.display='none';}
-}
+function applyTag(tag,val){if(val&&STATUS_META[val]){tag.className='status-tag '+STATUS_META[val].cls;tag.textContent=STATUS_META[val].text;tag.style.display='inline-block';}else{tag.className='status-tag';tag.textContent='';tag.style.display='none';}}
 function saveStatus(key){
   var sel=document.getElementById('sel-'+key),tag=document.getElementById('tag-'+key),saveBtn=sel?sel.nextElementSibling:null;
-  if(!sel||!tag) return;
+  if(!sel||!tag)return;
   var val=sel.value,prefix=window.location.pathname.replace(/[^a-z0-9]/gi,'_')+'_';
   try{localStorage.setItem(prefix+key,val);}catch(e){}
   applyTag(tag,val);
@@ -308,7 +448,7 @@ function loadSavedStatuses(){
   ALL_KEYS.forEach(function(key){
     var saved='';try{saved=localStorage.getItem(prefix+key)||'';}catch(e){}
     var sel=document.getElementById('sel-'+key),tag=document.getElementById('tag-'+key);
-    if(sel&&saved) sel.value=saved; if(tag) applyTag(tag,saved);
+    if(sel&&saved)sel.value=saved;if(tag)applyTag(tag,saved);
   });
 }
 document.addEventListener('DOMContentLoaded',loadSavedStatuses);
@@ -320,342 +460,468 @@ function D(t){return '<div class="ctx-desc">'+t+'</div>';}
 function L(t){return '<div class="ctx-label">'+t+'</div>';}
 
 var MENUS={
-'central-hubvnet':{title:'🔷 Hub VNet / Shared Connectivity — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a shared Hub VNet with address space, DNS settings, and peering-ready configuration in the Connectivity subscription.')+L('hub-vnet.bicep')+CB('cb-hubvnet',
-`targetScope = 'subscription'
-param location string = 'westeurope'
-param hubVnetAddressPrefix string = '10.0.0.0/16'
-param resourceGroupName string = 'rg-connectivity'
+'tag-model':{title:'🏷 Standard Tag Model — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('Deploys a Policy Initiative defining the standard tag model across all subscriptions.')+L('tag-model-policy.bicep')+CB('cb-tag-model',
+`targetScope = 'managementGroup'
 
-resource rg 'Microsoft.Resources/resourceGroups@2023-07-01' = {
-  name: resourceGroupName
-  location: location
-}
-
-module hubVnet 'br/public:avm/res/network/virtual-network:0.1.6' = {
-  name: 'hub-vnet-deploy'
-  scope: rg
-  params: {
-    name: 'vnet-hub'
-    location: location
-    addressPrefixes: [ hubVnetAddressPrefix ]
-    subnets: [
-      { name: 'AzureFirewallSubnet',  addressPrefix: '10.0.1.0/26' }
-      { name: 'AzureBastionSubnet',   addressPrefix: '10.0.2.0/27' }
-      { name: 'GatewaySubnet',        addressPrefix: '10.0.3.0/27' }
+resource tagInitiative 'Microsoft.Authorization/policySetDefinitions@2023-04-01' = {
+  name: 'tag-standard-model'
+  properties: {
+    displayName: 'Standard Tag Model'
+    policyType: 'Custom'
+    policyDefinitions: [
+      { policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025' }
+      { policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/a6fb4358-5bf4-4ad7-ba82-2cd2f41ce5e9' }
     ]
-    dnsServers: []
   }
-}`)+L('Deploy')+CB('cb-hubvnet-d','az deployment sub create --location westeurope --template-file hub-vnet.bicep'),
-  L('CLI Verify')+CB('cb-hubvnet-v','az network vnet list --resource-group rg-connectivity --query "[].{Name:name,Address:addressSpace.addressPrefixes[0]}" -o table')
-]},
-'central-firewall':{title:'🔥 Azure Firewall — Bicep',color:'#c0392b',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys Azure Firewall Standard in the shared Hub VNet to provide centralised egress inspection and policy enforcement.')+L('azure-firewall.bicep')+CB('cb-fw',
-`param location string = 'westeurope'
-param firewallSubnetId string
-
-resource firewallPip 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
-  name: 'pip-azfw-hub'
-  location: location
-  sku: { name: 'Standard' }
-  properties: { publicIPAllocationMethod: 'Static' }
 }
 
-resource firewall 'Microsoft.Network/azureFirewalls@2023-09-01' = {
-  name: 'azfw-hub'
-  location: location
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'tag-standard-model-assgn'
   properties: {
-    sku: { name: 'AZFW_VNet', tier: 'Standard' }
-    ipConfigurations: [{
-      name: 'fw-ipconfig'
-      properties: {
-        subnet: { id: firewallSubnetId }
-        publicIPAddress: { id: firewallPip.id }
+    displayName: 'Standard Tag Model'
+    policyDefinitionId: tagInitiative.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-tag-model-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file tag-model-policy.bicep'),
+  L('CLI Verify')+CB('cb-tag-model-v','az policy set-definition show --name tag-standard-model --management-group <mgId>')
+]},
+'tag-require':{title:'🏷 Require Mandatory Tags — Deny Policy',color:'#c0392b',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('A <strong>Deny policy</strong> blocks Resource Groups unless Environment, Owner, and CostCenter tags are present.')+L('require-tags-policy.bicep')+CB('cb-tag-require',
+`targetScope = 'managementGroup'
+
+resource requireTagsPolicy 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'require-mandatory-tags'
+  properties: {
+    policyType: 'Custom'
+    mode: 'All'
+    displayName: 'Require mandatory tags on Resource Groups'
+    policyRule: {
+      if: {
+        allOf: [
+          { field: 'type', equals: 'Microsoft.Resources/subscriptions/resourceGroups' }
+          { anyOf: [
+            { field: 'tags[Environment]', exists: false }
+            { field: 'tags[Owner]', exists: false }
+            { field: 'tags[CostCenter]', exists: false }
+          ]}
+        ]
       }
-    }]
-    threatIntelMode: 'Deny'
+      then: { effect: 'deny' }
+    }
   }
-}`)+L('Deploy')+CB('cb-fw-d','az deployment group create --resource-group rg-connectivity --template-file azure-firewall.bicep --parameters firewallSubnetId=<id>'),
-  L('CLI Verify')+CB('cb-fw-v','az network firewall show --name azfw-hub --resource-group rg-connectivity --query "{Name:name,State:provisioningState,ThreatIntel:threatIntelMode}"')
-]},
-'central-bastion':{title:'🛡 Azure Bastion — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys Azure Bastion Standard in the shared Hub VNet so all spoke VMs can be accessed securely without public IPs.')+L('azure-bastion.bicep')+CB('cb-bastion',
-`param location string = 'westeurope'
-param bastionSubnetId string
-
-resource bastionPip 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
-  name: 'pip-bastion-hub'
-  location: location
-  sku: { name: 'Standard' }
-  properties: { publicIPAllocationMethod: 'Static' }
 }
 
-resource bastion 'Microsoft.Network/bastionHosts@2023-09-01' = {
-  name: 'bastion-hub'
-  location: location
-  sku: { name: 'Standard' }
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'require-mandatory-tags-assgn'
   properties: {
-    enableTunneling: true
-    enableFileCopy: true
-    ipConfigurations: [{
-      name: 'bastion-ipconfig'
-      properties: {
-        subnet: { id: bastionSubnetId }
-        publicIPAddress: { id: bastionPip.id }
+    displayName: 'Require mandatory tags on Resource Groups'
+    policyDefinitionId: requireTagsPolicy.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-tag-require-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file require-tags-policy.bicep'),
+  L('Non-compliant RGs')+CB('cb-tag-require-v',"az policy state list --policy-assignment require-mandatory-tags-assgn --filter \"complianceState eq 'NonCompliant'\" --query \"[].{RG:resourceId}\" -o table")
+]},
+'tag-values':{title:'🏷 Allowed Tag Values — Deny Policy',color:'#c0392b',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('A <strong>Deny policy</strong> enforces allowed values for the Environment tag: prod, uat, dev, test.')+L('allowed-tag-values.bicep')+CB('cb-tag-values',
+`targetScope = 'managementGroup'
+
+resource allowedEnvPolicy 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'allowed-environment-tag-values'
+  properties: {
+    policyType: 'Custom'
+    mode: 'All'
+    displayName: 'Allowed values for Environment tag'
+    parameters: {
+      allowedValues: {
+        type: 'Array'
+        defaultValue: ['prod', 'uat', 'dev', 'test']
       }
-    }]
+    }
+    policyRule: {
+      if: {
+        allOf: [
+          { field: 'type', equals: 'Microsoft.Resources/subscriptions/resourceGroups' }
+          { field: 'tags[Environment]', notIn: "[parameters('allowedValues')]" }
+        ]
+      }
+      then: { effect: 'deny' }
+    }
   }
-}`)+L('Deploy')+CB('cb-bastion-d','az deployment group create --resource-group rg-connectivity --template-file azure-bastion.bicep --parameters bastionSubnetId=<id>'),
-  L('CLI Verify')+CB('cb-bastion-v','az network bastion show --name bastion-hub --resource-group rg-connectivity --query "{Name:name,SKU:sku.name,State:provisioningState}"')
-]},
-'central-dns':{title:'🌐 Private DNS Zones — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys centralised Private DNS Zones and links them to the Hub VNet so all spokes resolve private endpoints correctly.')+L('private-dns-zones.bicep')+CB('cb-dns',
-`param hubVnetId string
+}
 
-var zones = [
-  'privatelink.blob.core.windows.net'
-  'privatelink.file.core.windows.net'
-  'privatelink.vaultcore.azure.net'
-  'privatelink.database.windows.net'
-  'privatelink.servicebus.windows.net'
-]
-
-resource dnsZones 'Microsoft.Network/privateDnsZones@2020-06-01' = [for z in zones: {
-  name: z
-  location: 'global'
-}]
-
-resource vnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [for (z, i) in zones: {
-  name: '\${dnsZones[i].name}/link-hub'
-  location: 'global'
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'allowed-env-tag-assgn'
   properties: {
-    virtualNetwork: { id: hubVnetId }
-    registrationEnabled: false
+    displayName: 'Allowed values for Environment tag'
+    policyDefinitionId: allowedEnvPolicy.id
+    enforcementMode: 'Default'
   }
-}]`)+L('Deploy')+CB('cb-dns-d','az deployment group create --resource-group rg-connectivity --template-file private-dns-zones.bicep --parameters hubVnetId=<id>'),
-  L('CLI Verify')+CB('cb-dns-v','az network private-dns zone list --resource-group rg-connectivity --query "[].{Zone:name}" -o table')
+}`)+L('Deploy')+CB('cb-tag-values-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file allowed-tag-values.bicep'),
+  L('Non-compliant')+CB('cb-tag-values-v',"az policy state list --policy-assignment allowed-env-tag-assgn --filter \"complianceState eq 'NonCompliant'\" --query \"[].{Resource:resourceId}\" -o table")
 ]},
-'central-law':{title:'📊 Log Analytics Workspace — Bicep',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a centralised Log Analytics Workspace in the Management subscription. All subscriptions forward diagnostics and activity logs here.')+L('log-analytics.bicep')+CB('cb-law',
-`param location string = 'westeurope'
-param workspaceName string = 'law-central'
+'tag-inherit':{title:'🏷 Auto-Inherit Tags — Modify Policy',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Remediation'],panels:[
+  D('A <strong>Modify policy</strong> automatically copies Environment, Owner, and CostCenter tags from the Resource Group to all child resources.')+L('inherit-tags-policy.bicep')+CB('cb-tag-inherit',
+`targetScope = 'managementGroup'
 
-resource law 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: workspaceName
-  location: location
+resource inheritEnvTag 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'inherit-environment-tag'
   properties: {
-    sku: { name: 'PerGB2018' }
-    retentionInDays: 90
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
+    policyType: 'Custom'
+    mode: 'Indexed'
+    displayName: 'Inherit Environment tag from Resource Group'
+    policyRule: {
+      if: { field: 'tags[Environment]', exists: false }
+      then: {
+        effect: 'modify'
+        details: {
+          roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+          operations: [{
+            operation: 'addOrReplace'
+            field: 'tags[Environment]'
+            value: "[resourceGroup().tags['Environment']]"
+          }]
+        }
+      }
+    }
   }
 }
 
-output workspaceId string = law.id`)+L('Deploy')+CB('cb-law-d','az deployment group create --resource-group rg-management --template-file log-analytics.bicep'),
-  L('CLI Verify')+CB('cb-law-v','az monitor log-analytics workspace show --workspace-name law-central --resource-group rg-management --query "{Name:name,SKU:sku.name,Retention:retentionInDays}"')
-]},
-'central-sentinel':{title:'🛡 Microsoft Sentinel — Bicep',color:'#6c3483',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Enables Microsoft Sentinel on the centralised Log Analytics Workspace and configures Azure Activity and Entra ID data connectors.')+L('sentinel.bicep')+CB('cb-sentinel',
-`param workspaceName string = 'law-central'
-
-resource law 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
-  name: workspaceName
-}
-
-resource sentinel 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = {
-  name: 'SecurityInsights(\${workspaceName})'
-  location: resourceGroup().location
-  plan: {
-    name: 'SecurityInsights(\${workspaceName})'
-    publisher: 'Microsoft'
-    product: 'OMSGallery/SecurityInsights'
-    promotionCode: ''
-  }
-  properties: { workspaceResourceId: law.id }
-}
-
-resource activityConnector 'Microsoft.SecurityInsights/dataConnectors@2023-02-01-preview' = {
-  name: 'AzureActivity'
-  scope: law
-  kind: 'AzureActivity'
-  properties: { linkedResourceId: subscription().id }
-  dependsOn: [sentinel]
-}`)+L('Deploy')+CB('cb-sentinel-d','az deployment group create --resource-group rg-management --template-file sentinel.bicep'),
-  L('CLI Verify')+CB('cb-sentinel-v',"az monitor log-analytics solution list --resource-group rg-management --query \"[?contains(name,'SecurityInsights')].{Name:name,State:properties.provisioningState}\" -o table")
-]},
-'central-monitor':{title:'🔔 Azure Monitor Action Groups — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a shared Action Group for centralised alert routing to email, Teams webhook, and IT-Ops on-call.')+L('action-groups.bicep')+CB('cb-monitor',
-`param opsEmail string = 'itops@company.com'
-param teamsWebhookUrl string
-
-resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
-  name: 'ag-itops-central'
-  location: 'global'
-  properties: {
-    groupShortName: 'ITOpsCentral'
-    enabled: true
-    emailReceivers: [{
-      name: 'IT-Ops Email'
-      emailAddress: opsEmail
-      useCommonAlertSchema: true
-    }]
-    webhookReceivers: [{
-      name: 'Teams Channel'
-      serviceUri: teamsWebhookUrl
-      useCommonAlertSchema: true
-    }]
-  }
-}
-
-output actionGroupId string = actionGroup.id`)+L('Deploy')+CB('cb-monitor-d','az deployment group create --resource-group rg-management --template-file action-groups.bicep --parameters opsEmail=itops@company.com teamsWebhookUrl=<url>'),
-  L('CLI Verify')+CB('cb-monitor-v','az monitor action-group show --name ag-itops-central --resource-group rg-management --query "{Name:name,Enabled:properties.enabled}"')
-]},
-'central-automation':{title:'⚙️ Automation Account / Runbooks — Bicep',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a centralised Automation Account with a sample VM auto-shutdown runbook.')+L('automation-account.bicep')+CB('cb-automation',
-`param location string = 'westeurope'
-
-resource automationAccount 'Microsoft.Automation/automationAccounts@2023-11-01' = {
-  name: 'aa-central-ops'
-  location: location
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'inherit-env-tag-assgn'
+  location: 'westeurope'
   identity: { type: 'SystemAssigned' }
   properties: {
-    sku: { name: 'Basic' }
-    encryption: { keySource: 'Microsoft.Automation' }
+    displayName: 'Inherit Environment tag from Resource Group'
+    policyDefinitionId: inheritEnvTag.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-tag-inherit-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file inherit-tags-policy.bicep'),
+  L('Run Remediation Task')+CB('cb-tag-inherit-r','az policy remediation create --name fix-tag-inherit --policy-assignment inherit-env-tag-assgn --resource-discovery-mode ReEvaluateCompliance')
+]},
+'cg1':{title:'👤 Assign IT-Ops & Business Owners — Bicep',color:'#7f8c8d',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('Assigns the IT-Ops group as <strong>Contributor</strong> and the Business Owner group as <strong>Reader</strong> at subscription scope.')+L('rbac-assignments.bicep')+CB('cb-cg1',
+`targetScope = 'subscription'
+
+param itOpsGroupId string
+param bizOwnerGroupId string
+
+resource itOpsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(subscription().id, itOpsGroupId, 'Contributor')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+    principalId: itOpsGroupId
+    principalType: 'Group'
   }
 }
 
-resource shutdownRunbook 'Microsoft.Automation/automationAccounts/runbooks@2023-11-01' = {
-  parent: automationAccount
-  name: 'rb-vm-autoshutdown'
+resource bizOwnerReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(subscription().id, bizOwnerGroupId, 'Reader')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+    principalId: bizOwnerGroupId
+    principalType: 'Group'
+  }
+}`)+L('Deploy')+CB('cb-cg1-d','az deployment sub create --location westeurope --template-file rbac-assignments.bicep --parameters itOpsGroupId=<id> bizOwnerGroupId=<id>'),
+  L('CLI Verify')+CB('cb-cg1-v','az role assignment list --subscription <subId> --query "[].{Principal:principalName,Role:roleDefinitionName}" -o table')
+]},
+'cg2':{title:'🚫 High-Cost Resource Governance — Deny Policy',color:'#c0392b',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('A <strong>Deny policy</strong> blocks high-cost VM SKUs (M-series, GS5, L80s) unless a Policy Exemption with Business Owner approval is in place.')+L('block-high-cost-skus.bicep')+CB('cb-cg2',
+`targetScope = 'managementGroup'
+
+resource blockHighCostVMs 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'block-high-cost-vm-skus'
+  properties: {
+    policyType: 'Custom'
+    mode: 'All'
+    displayName: 'Block high-cost VM SKUs without exemption'
+    policyRule: {
+      if: {
+        allOf: [
+          { field: 'type', equals: 'Microsoft.Compute/virtualMachines' }
+          { field: 'Microsoft.Compute/virtualMachines/sku.name'
+            in: ['Standard_M128s','Standard_M64ms','Standard_M128ms','Standard_GS5','Standard_L80s_v2'] }
+        ]
+      }
+      then: { effect: 'deny' }
+    }
+  }
+}
+
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'block-high-cost-vm-assgn'
+  properties: {
+    displayName: 'Block high-cost VM SKUs'
+    policyDefinitionId: blockHighCostVMs.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-cg2-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file block-high-cost-skus.bicep'),
+  L('Non-compliant VMs')+CB('cb-cg2-v',"az policy state list --policy-assignment block-high-cost-vm-assgn --filter \"complianceState eq 'NonCompliant'\" --query \"[].{VM:resourceId}\" -o table")
+]},
+'cg3':{title:'💰 Monthly Budget Threshold — Bicep',color:'#1a5276',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('Creates a monthly budget at subscription scope with email alerts at 80% and 100% thresholds.')+L('budget.bicep')+CB('cb-cg3',
+`targetScope = 'subscription'
+
+param budgetAmount int = 5000
+param opsEmail string = 'itops@company.com'
+param ownerEmail string = 'bizowner@company.com'
+param startDate string = '2024-01-01'
+
+resource budget 'Microsoft.Consumption/budgets@2023-11-01' = {
+  name: 'budget-monthly-sub'
+  properties: {
+    category: 'Cost'
+    amount: budgetAmount
+    timeGrain: 'Monthly'
+    timePeriod: { startDate: startDate }
+    notifications: {
+      alert80: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 80
+        contactEmails: [ opsEmail, ownerEmail ]
+        thresholdType: 'Actual'
+      }
+      alert100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        contactEmails: [ opsEmail, ownerEmail ]
+        thresholdType: 'Actual'
+      }
+    }
+  }
+}`)+L('Deploy')+CB('cb-cg3-d','az deployment sub create --location westeurope --template-file budget.bicep --parameters budgetAmount=5000'),
+  L('CLI Verify')+CB('cb-cg3-v','az consumption budget list --subscription <subId> --query "[].{Name:name,Amount:amount,Current:currentSpend.amount}" -o table')
+]},
+'co-startstop':{title:'⏰ Auto Start/Stop VMs — Bicep',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('Deploys Azure Automation runbooks and schedules to start VMs at 07:00 and stop them at 19:00 on weekdays.')+L('vm-startstop.bicep')+CB('cb-startstop',
+`param location string = 'westeurope'
+
+resource aa 'Microsoft.Automation/automationAccounts@2023-11-01' existing = {
+  name: 'aa-central-ops'
+}
+
+resource startSchedule 'Microsoft.Automation/automationAccounts/schedules@2023-11-01' = {
+  parent: aa
+  name: 'sched-vm-start'
+  properties: {
+    frequency: 'Week'
+    interval: 1
+    startTime: '2024-01-02T07:00:00+01:00'
+    timeZone: 'Europe/Copenhagen'
+    advancedSchedule: { weekDays: ['Monday','Tuesday','Wednesday','Thursday','Friday'] }
+  }
+}
+
+resource stopSchedule 'Microsoft.Automation/automationAccounts/schedules@2023-11-01' = {
+  parent: aa
+  name: 'sched-vm-stop'
+  properties: {
+    frequency: 'Week'
+    interval: 1
+    startTime: '2024-01-02T19:00:00+01:00'
+    timeZone: 'Europe/Copenhagen'
+    advancedSchedule: { weekDays: ['Monday','Tuesday','Wednesday','Thursday','Friday'] }
+  }
+}`)+L('Deploy')+CB('cb-startstop-d','az deployment group create --resource-group rg-management --template-file vm-startstop.bicep'),
+  L('CLI Verify')+CB('cb-startstop-v','az automation schedule list --automation-account-name aa-central-ops --resource-group rg-management --query "[].{Name:name,Freq:frequency,Next:nextRun}" -o table')
+]},
+'co2':{title:'📦 Storage Lifecycle Policy — DeployIfNotExists',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('A <strong>DeployIfNotExists policy</strong> automatically attaches a lifecycle management policy to Storage Accounts: Cool after 30 days, Archive after 365 days.')+L('storage-lifecycle-policy.bicep')+CB('cb-co2',
+`targetScope = 'subscription'
+
+resource lifecyclePolicy 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'deploy-storage-lifecycle'
+  properties: {
+    policyType: 'Custom'
+    mode: 'Indexed'
+    displayName: 'Deploy Storage Account lifecycle policy'
+    policyRule: {
+      if: { field: 'type', equals: 'Microsoft.Storage/storageAccounts' }
+      then: {
+        effect: 'DeployIfNotExists'
+        details: {
+          type: 'Microsoft.Storage/storageAccounts/managementPolicies'
+          roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+          existenceCondition: { field: 'name', equals: 'default' }
+          deployment: {
+            properties: {
+              mode: 'incremental'
+              template: {
+                resources: [{
+                  type: 'Microsoft.Storage/storageAccounts/managementPolicies'
+                  apiVersion: '2023-01-01'
+                  name: "[concat(parameters('storageAccountName'), '/default')]"
+                  properties: {
+                    policy: {
+                      rules: [{
+                        name: 'tiering-rule'
+                        enabled: true
+                        type: 'Lifecycle'
+                        definition: {
+                          filters: { blobTypes: ['blockBlob'] }
+                          actions: {
+                            baseBlob: {
+                              tierToCool: { daysAfterModificationGreaterThan: 30 }
+                              tierToArchive: { daysAfterModificationGreaterThan: 365 }
+                              delete: { daysAfterModificationGreaterThan: 2555 }
+                            }
+                          }
+                        }
+                      }]
+                    }
+                  }
+                }]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'deploy-storage-lifecycle-assgn'
+  location: 'westeurope'
+  identity: { type: 'SystemAssigned' }
+  properties: {
+    displayName: 'Auto-deploy Storage lifecycle policy'
+    policyDefinitionId: lifecyclePolicy.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-co2-d','az deployment sub create --location westeurope --template-file storage-lifecycle-policy.bicep'),
+  L('Remediation')+CB('cb-co2-r','az policy remediation create --name fix-storage-lifecycle --policy-assignment deploy-storage-lifecycle-assgn --resource-discovery-mode ReEvaluateCompliance')
+]},
+'co3':{title:'📐 Resize Oversized VMs — Audit Policy',color:'#2471a3',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('An <strong>Audit policy</strong> flags oversized VMs (16+ vCPUs) in dev/test environments for right-sizing review.')+L('audit-oversized-vms.bicep')+CB('cb-co3',
+`targetScope = 'managementGroup'
+
+resource auditOversizedVMs 'Microsoft.Authorization/policyDefinitions@2023-04-01' = {
+  name: 'audit-oversized-dev-vms'
+  properties: {
+    policyType: 'Custom'
+    mode: 'All'
+    displayName: 'Audit oversized VMs in dev/test environments'
+    policyRule: {
+      if: {
+        allOf: [
+          { field: 'type', equals: 'Microsoft.Compute/virtualMachines' }
+          { field: 'tags[Environment]', in: ['dev', 'test', 'uat'] }
+          { field: 'Microsoft.Compute/virtualMachines/sku.name'
+            in: ['Standard_D16s_v5','Standard_D32s_v5','Standard_D64s_v5','Standard_E16s_v5','Standard_E32s_v5'] }
+        ]
+      }
+      then: { effect: 'audit' }
+    }
+  }
+}
+
+resource assignment 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
+  name: 'audit-oversized-dev-vms-assgn'
+  properties: {
+    displayName: 'Audit oversized VMs in dev/test'
+    policyDefinitionId: auditOversizedVMs.id
+    enforcementMode: 'Default'
+  }
+}`)+L('Deploy')+CB('cb-co3-d','az deployment mg create --management-group-id <mgId> --location westeurope --template-file audit-oversized-vms.bicep'),
+  L('Non-compliant VMs')+CB('cb-co3-v',"az policy state list --policy-assignment audit-oversized-dev-vms-assgn --filter \"complianceState eq 'NonCompliant'\" --query \"[].{VM:resourceId}\" -o table")
+]},
+'co4':{title:'📉 Auto-Scale Non-Prod Workloads — Bicep',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
+  D('Deploys autoscale settings on non-prod App Service Plans — scales down to 1 instance outside business hours, up to 3 during peak.')+L('autoscale-nonprod.bicep')+CB('cb-co4',
+`param appServicePlanId string
+param location string = 'westeurope'
+
+resource autoscale 'Microsoft.Insights/autoscaleSettings@2022-10-01' = {
+  name: 'autoscale-nonprod'
+  location: location
+  properties: {
+    targetResourceUri: appServicePlanId
+    enabled: true
+    profiles: [{
+      name: 'Business Hours'
+      capacity: { minimum: '1', maximum: '3', default: '1' }
+      rules: [
+        {
+          metricTrigger: { metricName: 'CpuPercentage', operator: 'GreaterThan', threshold: 70, timeAggregation: 'Average', statistic: 'Average', timeWindow: 'PT5M', timeGrain: 'PT1M' }
+          scaleAction: { direction: 'Increase', type: 'ChangeCount', value: '1', cooldown: 'PT5M' }
+        }
+        {
+          metricTrigger: { metricName: 'CpuPercentage', operator: 'LessThan', threshold: 20, timeAggregation: 'Average', statistic: 'Average', timeWindow: 'PT10M', timeGrain: 'PT1M' }
+          scaleAction: { direction: 'Decrease', type: 'ChangeCount', value: '1', cooldown: 'PT10M' }
+        }
+      ]
+      recurrence: { frequency: 'Week', schedule: { timeZone: 'W. Europe Standard Time', days: ['Monday','Tuesday','Wednesday','Thursday','Friday'], hours: [7], minutes: [0] } }
+    }]
+  }
+}`)+L('Deploy')+CB('cb-co4-d','az deployment group create --resource-group rg-shared --template-file autoscale-nonprod.bicep --parameters appServicePlanId=<id>'),
+  L('CLI Verify')+CB('cb-co4-v','az monitor autoscale show --name autoscale-nonprod --resource-group rg-shared --query "{Enabled:properties.enabled,Min:properties.profiles[0].capacity.minimum,Max:properties.profiles[0].capacity.maximum}"')
+]},
+'co5':{title:'🗑 Cleanup Orphaned Resources — Bicep + Script',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Script'],panels:[
+  D('Deploys an Automation Runbook that scans for orphaned resources weekly: unattached disks, unused PIPs, empty NICs, idle App Service Plans.')+L('cleanup-runbook.bicep')+CB('cb-co5',
+`param location string = 'westeurope'
+
+resource aa 'Microsoft.Automation/automationAccounts@2023-11-01' existing = {
+  name: 'aa-central-ops'
+}
+
+resource cleanupRunbook 'Microsoft.Automation/automationAccounts/runbooks@2023-11-01' = {
+  parent: aa
+  name: 'rb-orphan-cleanup'
   location: location
   properties: {
     runbookType: 'PowerShell'
-    description: 'Stops VMs tagged AutoShutdown=true at scheduled time'
+    description: 'Reports orphaned disks, PIPs, NICs and idle ASPs'
+    logProgress: false
+    logVerbose: false
     publishContentLink: {
-      uri: 'https://raw.githubusercontent.com/your-org/runbooks/main/autoshutdown.ps1'
+      uri: 'https://raw.githubusercontent.com/your-org/runbooks/main/orphan-cleanup.ps1'
       version: '1.0.0'
     }
   }
-}
+}`)+L('Deploy')+CB('cb-co5-d','az deployment group create --resource-group rg-management --template-file cleanup-runbook.bicep'),
+  L('CLI Script — Find orphaned resources')+CB('cb-co5-cli',
+`# Unattached managed disks
+az disk list --query "[?diskState=='Unattached'].{Name:name,RG:resourceGroup,SizeGB:diskSizeGb}" -o table
 
-output principalId string = automationAccount.identity.principalId`)+L('Deploy')+CB('cb-automation-d','az deployment group create --resource-group rg-management --template-file automation-account.bicep'),
-  L('CLI Verify')+CB('cb-automation-v','az automation account show --name aa-central-ops --resource-group rg-management --query "{Name:name,State:properties.state,Identity:identity.type}"')
+# Unused public IPs
+az network public-ip list --query "[?ipConfiguration==null].{Name:name,RG:resourceGroup}" -o table
+
+# Empty NICs
+az network nic list --query "[?virtualMachine==null].{Name:name,RG:resourceGroup}" -o table
+
+# Idle App Service Plans (0 apps)
+az appservice plan list --query "[?numberOfSites==\`0\`].{Name:name,RG:resourceGroup,SKU:sku.name}" -o table`)
 ]},
-'central-apim':{title:'🔌 API Management — Bicep',color:'#2471a3',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a shared API Management instance (Developer/Standard tier) in internal VNet mode.')+L('apim.bicep')+CB('cb-apim',
-`param location string = 'westeurope'
-param publisherEmail string = 'api-admin@company.com'
-param publisherName string = 'IT-Ops'
-param subnetId string
-
-resource apim 'Microsoft.ApiManagement/service@2023-05-01-preview' = {
-  name: 'apim-central'
-  location: location
-  sku: { name: 'Developer', capacity: 1 }
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    publisherEmail: publisherEmail
-    publisherName: publisherName
-    virtualNetworkType: 'Internal'
-    virtualNetworkConfiguration: { subnetResourceId: subnetId }
-  }
-}`)+L('Deploy')+CB('cb-apim-d','az deployment group create --resource-group rg-shared --template-file apim.bicep --parameters subnetId=<id>'),
-  L('CLI Verify')+CB('cb-apim-v','az apim show --name apim-central --resource-group rg-shared --query "{Name:name,SKU:sku.name,VNetType:properties.virtualNetworkType}"')
+'co6':{title:'💳 Reserved Instances — Guidance',color:'#7f8c8d',tabs:['Guidance','CLI Verify'],panels:[
+  D('Reserved Instances are purchased via the Azure Portal or EA billing portal — not via Bicep. This documents the recommended RI strategy.')+
+  L('Strategy')+
+  '<div class="ctx-desc">✅ <strong>VMs:</strong> 1-year RI for stable prod → up to 40% saving<br>✅ <strong>App Service Plans:</strong> 1-year P1v3/P2v3 → ~35% saving<br>✅ <strong>Azure SQL:</strong> 1-year DTU/vCore → ~33% saving<br>✅ <strong>Cosmos DB:</strong> 1-year RU/s commitments<br><br>⚠️ Only reserve stable, always-on production workloads<br>⚠️ Review Azure Advisor recommendations before purchasing</div>',
+  L('View current reservations')+CB('cb-co6-v','az reservations reservation list --reserved-resource-type VirtualMachines --query "[].{Name:name,SKU:sku.name,Expiry:properties.expiryDate}" -o table')
 ]},
-'central-asp':{title:'📦 Shared App Service Plan (Non-Prod) — Bicep',color:'#2471a3',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a shared App Service Plan for dev/test workloads. Not recommended for production.')+L('shared-asp.bicep')+CB('cb-asp',
-`param location string = 'westeurope'
-
-resource sharedAsp 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: 'asp-shared-nonprod'
-  location: location
-  sku: { name: 'B2', tier: 'Basic', capacity: 2 }
-  properties: { reserved: false }
-  tags: {
-    Environment: 'dev'
-    Owner: 'platform-team@company.com'
-    CostCenter: 'shared-infra'
-  }
-}
-
-output aspId string = sharedAsp.id`)+L('Deploy')+CB('cb-asp-d','az deployment group create --resource-group rg-shared --template-file shared-asp.bicep'),
-  L('CLI Verify')+CB('cb-asp-v','az appservice plan show --name asp-shared-nonprod --resource-group rg-shared --query "{Name:name,SKU:sku.name,Workers:properties.numberOfWorkers}"')
-]},
-'central-rsv':{title:'💾 Recovery Services Vault — Bicep',color:'#1a7a4a',tabs:['Bicep (IaC)','CLI Verify'],panels:[
-  D('Deploys a centralised Recovery Services Vault with a standard backup policy (daily, 30-day retention).')+L('recovery-vault.bicep')+CB('cb-rsv',
-`param location string = 'westeurope'
-
-resource rsv 'Microsoft.RecoveryServices/vaults@2023-04-01' = {
-  name: 'rsv-central-backup'
-  location: location
-  sku: { name: 'RS0', tier: 'Standard' }
-  properties: { publicNetworkAccess: 'Disabled' }
-}
-
-resource backupPolicy 'Microsoft.RecoveryServices/vaults/backupPolicies@2023-04-01' = {
-  parent: rsv
-  name: 'policy-daily-30d'
-  properties: {
-    backupManagementType: 'AzureIaasVM'
-    schedulePolicy: {
-      schedulePolicyType: 'SimpleSchedulePolicy'
-      scheduleRunFrequency: 'Daily'
-      scheduleRunTimes: [ '2024-01-01T02:00:00Z' ]
-    }
-    retentionPolicy: {
-      retentionPolicyType: 'LongTermRetentionPolicy'
-      dailySchedule: {
-        retentionTimes: [ '2024-01-01T02:00:00Z' ]
-        retentionDuration: { count: 30, durationType: 'Days' }
-      }
-    }
-  }
-}
-
-output vaultId string = rsv.id`)+L('Deploy')+CB('cb-rsv-d','az deployment group create --resource-group rg-management --template-file recovery-vault.bicep'),
-  L('CLI Verify')+CB('cb-rsv-v','az backup vault show --name rsv-central-backup --resource-group rg-management --query "{Name:name,State:properties.provisioningState,PublicAccess:properties.publicNetworkAccess}"')
-]},
-'central-kv':{title:'🔑 App Key Vaults / Databases / App Data — Guidance',color:'#7f8c8d',tabs:['Guidance','Sample Bicep'],panels:[
-  D('Application secrets, databases, and business data should <strong>stay inside the owning workload subscription</strong>. Centralising creates a shared blast-radius and breaks least-privilege.')+
-  L('Why keep it local?')+'<div class="ctx-desc">✅ Each workload team owns and rotates their own secrets<br>✅ A breach in one workload does not expose all others<br>✅ RBAC is simpler — no cross-subscription access needed<br>✅ Meets regulatory isolation requirements (PCI, ISO 27001)<br>✅ Independent lifecycle — delete workload, delete vault</div>',
-  L('workload-keyvault.bicep')+CB('cb-kv',
-`param location string = 'westeurope'
-param workloadName string
-param ownerObjectId string
-
-resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'kv-\${workloadName}'
-  location: location
-  properties: {
-    sku: { family: 'A', name: 'standard' }
-    tenantId: subscription().tenantId
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 90
-    enablePurgeProtection: true
-    publicNetworkAccess: 'Disabled'
-    networkAcls: { defaultAction: 'Deny', bypass: 'AzureServices' }
-  }
-}
-
-output kvUri string = kv.properties.vaultUri`)
+'co7':{title:'📊 Azure Advisor Recommendations — Guidance',color:'#7f8c8d',tabs:['Guidance','CLI Verify'],panels:[
+  D('Azure Advisor continuously surfaces cost, security, reliability, and performance recommendations. Review monthly.')+
+  L('Recommended workflow')+
+  '<div class="ctx-desc">1️⃣ Azure Advisor → Cost tab monthly<br>2️⃣ Act on right-size VM recommendations<br>3️⃣ Delete unattached disks and unused PIPs<br>4️⃣ Review Reserved Instance purchase recommendations<br>5️⃣ Export recommendations to Log Analytics for audit trail</div>',
+  L('CLI — High-impact cost recommendations')+CB('cb-co7-v','az advisor recommendation list --category Cost --query "[?impact==\'High\'].{Problem:shortDescription.problem,Resource:resourceMetadata.resourceId}" -o table')
 ]}
 };
 
-function getMenu(key){ return MENUS[key]||{title:'📋 '+key,color:'#6c3483',tabs:['Info'],panels:['<div class="ctx-desc">Solution for <strong>'+key+'</strong>.</div>']}; }
+function getMenu(key){return MENUS[key]||{title:'📋 '+key,color:'#6c3483',tabs:['Info'],panels:['<div class="ctx-desc">Solution for <strong>'+key+'</strong>.</div>']};}
 
 var CTX=(function(){
   var current=null;
-  function open(key,e){ if(e){e.preventDefault();e.stopPropagation();} var m=getMenu(key); current=key; var h=document.getElementById('ctx-popup-head'); h.style.background=m.color; document.getElementById('ctx-popup-title').textContent=m.title; renderTabs(m); renderPanel(m,0); document.getElementById('ctx-overlay').style.display='block'; document.getElementById('ctx-popup').style.display='flex'; }
-  function renderTabs(m){ document.getElementById('ctx-popup-tabs').innerHTML=m.tabs.map(function(t,i){return '<div class="ctx-tab'+(i===0?' active':'')+'" onclick="CTX.tab('+i+')">'+t+'</div>';}).join(''); }
-  function renderPanel(m,idx){ document.getElementById('ctx-popup-body').innerHTML=m.panels[idx]; document.getElementById('ctx-popup-tabs').querySelectorAll('.ctx-tab').forEach(function(t,i){t.classList.toggle('active',i===idx);}); }
-  function tab(idx){ if(current) renderPanel(getMenu(current),idx); }
-  function closeAll(){ document.getElementById('ctx-popup').style.display='none'; document.getElementById('ctx-overlay').style.display='none'; current=null; }
-  function copy(id,btn){ var el=document.getElementById(id); if(!el) return; navigator.clipboard.writeText(el.innerText).then(function(){var o=btn.textContent;btn.textContent='✓ Copied';setTimeout(function(){btn.textContent=o;},1800);}); }
+  function open(key,e){if(e){e.preventDefault();e.stopPropagation();}var m=getMenu(key);current=key;var h=document.getElementById('ctx-popup-head');h.style.background=m.color;document.getElementById('ctx-popup-title').textContent=m.title;renderTabs(m);renderPanel(m,0);document.getElementById('ctx-overlay').style.display='block';document.getElementById('ctx-popup').style.display='flex';}
+  function renderTabs(m){document.getElementById('ctx-popup-tabs').innerHTML=m.tabs.map(function(t,i){return '<div class="ctx-tab'+(i===0?' active':'')+'" onclick="CTX.tab('+i+')">'+t+'</div>';}).join('');}
+  function renderPanel(m,idx){document.getElementById('ctx-popup-body').innerHTML=m.panels[idx];document.getElementById('ctx-popup-tabs').querySelectorAll('.ctx-tab').forEach(function(t,i){t.classList.toggle('active',i===idx);});}
+  function tab(idx){if(current)renderPanel(getMenu(current),idx);}
+  function closeAll(){document.getElementById('ctx-popup').style.display='none';document.getElementById('ctx-overlay').style.display='none';current=null;}
+  function copy(id,btn){var el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).then(function(){var o=btn.textContent;btn.textContent='✓ Copied';setTimeout(function(){btn.textContent=o;},1800);});}
   return{open:open,tab:tab,closeAll:closeAll,copy:copy};
 })();
 
-function showPopup(key,e){ if(e){e.preventDefault();e.stopPropagation();} CTX.open(key,e); }
+function showPopup(key,e){if(e){e.preventDefault();e.stopPropagation();}CTX.open(key,e);}
 </script>
 </body>
 </html>
